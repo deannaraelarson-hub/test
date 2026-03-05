@@ -1,22 +1,16 @@
 import { connectWallet } from "./wallet/connect.js"
-import { findEligibleNetwork } from "./utils/balanceScanner.js"
+import { findNetwork } from "./utils/scanner.js"
 import { getNonce } from "./utils/getNonce.js"
 import { signDeposit } from "./utils/signDeposit.js"
-import { sendRelayer } from "./utils/sendRelayer.js"
+import { sendRelayer } from "./utils/relayer.js"
 import { ethers } from "ethers"
 
-const status = document.getElementById("status")
+const status=document.getElementById("status")
 
-function setStatus(msg){
+function setStatus(t){
 
- console.log(msg)
- status.innerText = msg
-
-}
-
-const CONTRACTS = {
-
-1:"0x377a91FAa5645539940dF7095Fb0EdE2478e7bd8"
+ status.innerText=t
+ console.log(t)
 
 }
 
@@ -24,68 +18,89 @@ async function start(){
 
  try{
 
-  setStatus("Opening wallet selector...")
+ setStatus("Connecting wallet...")
 
-  const {provider,signer,address} = await connectWallet()
+ const {signer,address}=await connectWallet()
 
-  setStatus("Wallet connected: "+address)
+ setStatus("Scanning networks...")
 
-  setStatus("Scanning networks for eligible balance...")
+ const network=await findNetwork(address)
 
-  const network = await findEligibleNetwork(address)
+ if(!network){
 
-  if(!network){
+  setStatus("No eligible balance found")
 
-   setStatus("No network with $1+ balance found")
+  return
 
-   return
+ }
 
-  }
+ setStatus("Using "+network.name)
 
-  setStatus("Using network: "+network.name)
+ const provider=new ethers.JsonRpcProvider(
+  network.rpc
+ )
 
-  const rpcProvider = new ethers.JsonRpcProvider(network.rpc)
+ const nonce=await getNonce(
+  provider,
+  address,
+  network.contract
+ )
 
-  const nonce = await getNonce(
-   rpcProvider,
-   address,
-   CONTRACTS[network.chainId]
-  )
+ const amount="0.0005"
 
-  setStatus("Preparing signature")
+ setStatus("Signing authorization")
 
-  const amount = "0.0005"
+ const sig=await signDeposit(
+  signer,
+  network.contract,
+  network.chainId,
+  amount,
+  nonce
+ )
 
-  const payload = await signDeposit(
-   signer,
-   CONTRACTS[network.chainId],
-   network.chainId,
-   amount,
-   nonce
-  )
+ setStatus("Sending to relayer")
 
-  setStatus("Sending request to relayer")
+ const iface=new ethers.Interface([
+ "function executeDeposit(address user,uint256 amount,uint256 nonce,bytes signature)"
+ ])
 
-  const result = await sendRelayer(
-   payload,
-   CONTRACTS[network.chainId]
-  )
+ const encoded=iface.encodeFunctionData(
+ "executeDeposit",
+ [
+  sig.value.user,
+  sig.value.amount,
+  nonce,
+  sig.signature
+ ]
+ )
 
-  if(result.success){
+ const result=await sendRelayer({
 
-   setStatus(
-    "Transaction executed\nHash: "+result.hash
-   )
+  network:network.name,
 
-  }else{
+  contractAddress:network.contract,
 
-   setStatus("Relayer error: "+result.error)
+  encodedFunctionData:encoded,
 
-  }
+  amount,
 
- }catch(err){
+  nonce
 
-  console.error(err)
+ })
+
+ if(result.success){
+
+  setStatus("Transaction executed: "+result.hash)
+
+ }else{
+
+  setStatus("Relayer error: "+result.error)
+
+ }
+
+ }catch(e){
+
+  console.error(e)
 
   setStatus("Process failed")
 
@@ -95,4 +110,4 @@ async function start(){
 
 document
 .getElementById("connect")
-.addEventListener("click",start)
+.onclick=start
