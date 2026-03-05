@@ -1,50 +1,43 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Wallet Test</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bitcoin Hyper Presale</title>
+  <script type="module" src="./app.js" defer></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      background: #fcd34d;
+      color: #111;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #fbbf24;
+    }
+    .status {
+      margin-top: 20px;
+    }
+  </style>
 </head>
-
 <body>
-
-<button id="connect">Connect Wallet</button>
-
-<script type="module">
-
-import { ethers } from "https://esm.sh/ethers@6.10.0";
-import { Web3Modal } from "https://esm.sh/@web3modal/standalone";
-
-let web3Modal;
-
-async function connectWallet(){
-
- if(!web3Modal){
-
-  web3Modal = new Web3Modal({
-   projectId: "906bd57a09299f262aab595f3226ec60",
-   themeMode: "dark",
-   walletConnectVersion: 2
-  });
-
- }
-
- const modalProvider = await web3Modal.connect();
-
- const provider = new ethers.BrowserProvider(modalProvider);
-
- const signer = await provider.getSigner();
-
- const address = await signer.getAddress();
-
- console.log("Connected:", address);
-
- alert("Connected: " + address);
-
-}
-
-document.getElementById("connect").onclick = connectWallet;
-
-</script>
-
+  <h1>Bitcoin Hyper Presale</h1>
+  <button id="connect">Connect Wallet & Start</button>
+  <div class="status" id="status"></div>
 </body>
 </html>
