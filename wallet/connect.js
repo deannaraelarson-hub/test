@@ -3,7 +3,6 @@ import { mainnet, bsc, polygon, arbitrum, avalanche } from "@reown/appkit/networ
 import { ethers } from "ethers"
 
 let modal
-let walletProvider
 
 export async function connectWallet() {
   if (!modal) {
@@ -11,24 +10,14 @@ export async function connectWallet() {
       projectId: "906bd57a09299f262aab595f3226ec60",
       networks: [mainnet, bsc, polygon, arbitrum, avalanche],
       themeMode: "dark",
-      themeVariables: {
-        "--w3m-accent": "#F7931A",
-        "--w3m-border-radius-master": "8px"
-      },
-      metadata: {
-        name: "NexaWorld Relayer",
-        description: "Execute deposits via relayer",
-        url: window.location.origin,
-        icons: []
-      }
+      themeVariables: { "--w3m-accent": "#F7931A", "--w3m-border-radius-master": "8px" },
     })
   }
 
-  if (!walletProvider) {
-    await modal.open()
-    walletProvider = modal.getWalletProvider()
-  }
+  const session = await modal.open()
+  if (!session) throw new Error("Wallet connection canceled")
 
+  const walletProvider = modal.getWalletProvider()
   if (!walletProvider) throw new Error("Wallet provider not found")
 
   const provider = new ethers.BrowserProvider(walletProvider)
