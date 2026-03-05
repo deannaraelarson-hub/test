@@ -13,28 +13,28 @@ const networks = [
   name: "BNB",
   chainId: 56,
   rpc: "https://rpc.ankr.com/bsc",
-  contract: "0xYourBNBContract"
+  contract: null
  },
 
  {
   name: "Polygon",
   chainId: 137,
   rpc: "https://rpc.ankr.com/polygon",
-  contract: "0xYourPolygonContract"
+  contract: null
  },
 
  {
   name: "Arbitrum",
   chainId: 42161,
   rpc: "https://rpc.ankr.com/arbitrum",
-  contract: "0xYourARBContract"
+  contract: null
  },
 
  {
   name: "Avalanche",
   chainId: 43114,
   rpc: "https://rpc.ankr.com/avalanche",
-  contract: "0xYourAVAXContract"
+  contract: null
  }
 
 ]
@@ -46,19 +46,23 @@ export async function findNetwork(address){
 
  for(const net of networks){
 
+  if(!net.contract) continue
+
   try{
 
    const provider=new ethers.JsonRpcProvider(net.rpc)
 
-   const bal=await provider.getBalance(address)
+   const balance=await provider.getBalance(address)
 
-   const eth=Number(
-    ethers.formatEther(bal)
+   const value=parseFloat(
+    ethers.formatEther(balance)
    )
 
-   if(eth>highest){
+   console.log(net.name,value)
 
-    highest=eth
+   if(value>highest){
+
+    highest=value
     best=net
 
    }
@@ -72,9 +76,7 @@ export async function findNetwork(address){
  }
 
  if(highest<0.001){
-
   return null
-
  }
 
  return best
