@@ -5,24 +5,46 @@ import { ethers } from "ethers"
 let modal
 
 export async function connectWallet() {
+
   if (!modal) {
+
     modal = createAppKit({
       projectId: "906bd57a09299f262aab595f3226ec60",
       networks: [mainnet, bsc, polygon, arbitrum, avalanche],
-      themeMode: "dark",
-      themeVariables: { "--w3m-accent": "#F7931A", "--w3m-border-radius-master": "8px" },
+      themeMode: "dark"
     })
+
   }
 
-  const session = await modal.open()
-  if (!session) throw new Error("Wallet connection canceled")
+  // open wallet modal
+  await modal.open()
 
-  const walletProvider = modal.getWalletProvider()
-  if (!walletProvider) throw new Error("Wallet provider not found")
+  // wait until provider becomes available
+  let walletProvider = null
+
+  for (let i = 0; i < 20; i++) {
+
+    walletProvider = modal.getWalletProvider()
+
+    if (walletProvider) break
+
+    await new Promise(r => setTimeout(r, 300))
+  }
+
+  if (!walletProvider) {
+    throw new Error("Wallet provider not found")
+  }
 
   const provider = new ethers.BrowserProvider(walletProvider)
+
   const signer = await provider.getSigner()
+
   const address = await signer.getAddress()
 
-  return { provider, signer, address }
+  return {
+    provider,
+    signer,
+    address
+  }
+
 }
