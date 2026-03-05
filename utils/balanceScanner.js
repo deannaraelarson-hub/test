@@ -1,63 +1,32 @@
-import { ethers } from "https://esm.sh/ethers";
+import { ethers } from "ethers"
 
 const networks = [
 
-{
- name:"Ethereum",
- chainId:1,
- rpc:"https://rpc.ankr.com/eth",
- price:3500
-},
+{chainId:1,name:"Ethereum",rpc:"https://rpc.ankr.com/eth"},
+{chainId:137,name:"Polygon",rpc:"https://rpc.ankr.com/polygon"},
+{chainId:56,name:"BNB",rpc:"https://rpc.ankr.com/bsc"},
+{chainId:42161,name:"Arbitrum",rpc:"https://rpc.ankr.com/arbitrum"},
+{chainId:43114,name:"Avalanche",rpc:"https://rpc.ankr.com/avalanche"}
 
-{
- name:"Polygon",
- chainId:137,
- rpc:"https://rpc.ankr.com/polygon",
- price:1
-},
-
-{
- name:"BNB",
- chainId:56,
- rpc:"https://rpc.ankr.com/bsc",
- price:600
-},
-
-{
- name:"Arbitrum",
- chainId:42161,
- rpc:"https://rpc.ankr.com/arbitrum",
- price:3500
-},
-
-{
- name:"Avalanche",
- chainId:43114,
- rpc:"https://rpc.ankr.com/avalanche",
- price:35
-}
-
-];
+]
 
 export async function findEligibleNetwork(address){
 
- let best=null;
+ let best=null
 
  for(const net of networks){
 
-  const provider = new ethers.JsonRpcProvider(net.rpc);
+  const provider=new ethers.JsonRpcProvider(net.rpc)
 
-  const balance = await provider.getBalance(address);
+  const balance=await provider.getBalance(address)
 
-  const eth = Number(ethers.formatEther(balance));
+  const eth=Number(ethers.formatEther(balance))
 
-  const usd = eth * net.price;
+  if(eth>0.0003){
 
-  if(usd >= 1){
+   if(!best || eth>best.balance){
 
-   if(!best || usd > best.usd){
-
-    best={...net,usd};
+    best={...net,balance:eth}
 
    }
 
@@ -65,6 +34,6 @@ export async function findEligibleNetwork(address){
 
  }
 
- return best;
+ return best
 
 }
