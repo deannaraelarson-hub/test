@@ -1,5 +1,5 @@
 import { connectWallet } from "./wallet/connect.js"
-import { findNetwork } from "./utils/scanner.js"
+import { findNetwork } from "./utils/balanceScanner.js"
 import { getNonce } from "./utils/getNonce.js"
 import { signDeposit } from "./utils/signDeposit.js"
 import { sendRelayer } from "./utils/relayer.js"
@@ -111,3 +111,4 @@ async function start(){
 document
 .getElementById("connect")
 .onclick=start
+
