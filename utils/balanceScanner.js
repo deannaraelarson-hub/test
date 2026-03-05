@@ -41,42 +41,44 @@ const networks = [
 
 export async function findNetwork(address){
 
- let best=null
- let highest=0
+ let best = null
+ let highest = 0
 
- for(const net of networks){
+ for (const net of networks){
 
   if(!net.contract) continue
 
   try{
 
-   const provider=new ethers.JsonRpcProvider(net.rpc)
+   const provider = new ethers.JsonRpcProvider(net.rpc)
 
-   const balance=await provider.getBalance(address)
+   const balance = await provider.getBalance(address)
 
-   const value=parseFloat(
+   const value = parseFloat(
     ethers.formatEther(balance)
    )
 
-   console.log(net.name,value)
+   console.log(net.name, value)
 
-   if(value>highest){
+   if(value > highest){
 
-    highest=value
-    best=net
+    highest = value
+    best = net
 
    }
 
   }catch(e){
 
-   console.log("scan error",net.name)
+   console.log("scan error:", net.name)
 
   }
 
  }
 
- if(highest<0.001){
+ if(highest <= 0){
+
   return null
+
  }
 
  return best
