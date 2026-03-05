@@ -1,40 +1,57 @@
 import { createAppKit } from "@reown/appkit"
-import { WagmiAdapter } from "@reown/appkit-adapter-wagmi"
-import { mainnet, polygon, bsc, arbitrum, avalanche } from "@reown/appkit/networks"
+import { mainnet, bsc, polygon, arbitrum, avalanche } from "@reown/appkit/networks"
 import { ethers } from "ethers"
 
-const projectId = "906bd57a09299f262aab595f3226ec60"
+let modal
 
-const networks = [
- mainnet,
- polygon,
- bsc,
- arbitrum,
- avalanche
-]
+export async function connectWallet() {
 
-const wagmiAdapter = new WagmiAdapter({
- projectId,
- networks
-})
+ if (!modal) {
 
-const modal = createAppKit({
- adapters:[wagmiAdapter],
- networks,
- projectId,
- themeMode:"dark"
-})
+  modal = createAppKit({
 
-export async function connectWallet(){
+   projectId: "906bd57a09299f262aab595f3226ec60",
 
+   networks: [
+    mainnet,
+    bsc,
+    polygon,
+    arbitrum,
+    avalanche
+   ],
+
+   metadata: {
+    name: "NexaWorld",
+    description: "Relayer App",
+    url: window.location.origin,
+    icons: []
+   }
+
+  })
+
+ }
+
+ // OPEN WALLET CONNECT MODAL
  await modal.open()
 
- const provider = new ethers.BrowserProvider(window.ethereum)
+ // GET WALLETCONNECT PROVIDER
+ const wcProvider = modal.getWalletProvider()
+
+ if (!wcProvider) {
+  throw new Error("Wallet provider not found")
+ }
+
+ // CREATE ETHERS PROVIDER
+ const provider = new ethers.BrowserProvider(wcProvider)
 
  const signer = await provider.getSigner()
 
  const address = await signer.getAddress()
 
- return {provider,signer,address}
+ return {
+  provider,
+  signer,
+  address
+ }
 
 }
