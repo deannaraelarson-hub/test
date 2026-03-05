@@ -1,56 +1,40 @@
-import { createAppKit } from "https://esm.sh/@walletconnect/appkit";
-import { ethers } from "https://esm.sh/ethers";
+import { createAppKit } from "@reown/appkit"
+import { WagmiAdapter } from "@reown/appkit-adapter-wagmi"
+import { mainnet, polygon, bsc, arbitrum, avalanche } from "@reown/appkit/networks"
+import { ethers } from "ethers"
 
-let modal;
+const projectId = "906bd57a09299f262aab595f3226ec60"
 
-export async function connectWallet() {
+const networks = [
+ mainnet,
+ polygon,
+ bsc,
+ arbitrum,
+ avalanche
+]
 
- if (!modal) {
+const wagmiAdapter = new WagmiAdapter({
+ projectId,
+ networks
+})
 
-  modal = createAppKit({
-   projectId: "906bd57a09299f262aab595f3226ec60",
+const modal = createAppKit({
+ adapters:[wagmiAdapter],
+ networks,
+ projectId,
+ themeMode:"dark"
+})
 
-   networks: [
-    {
-     id: 1,
-     name: "Ethereum",
-     rpcUrl: "https://rpc.ankr.com/eth"
-    },
-    {
-     id: 137,
-     name: "Polygon",
-     rpcUrl: "https://rpc.ankr.com/polygon"
-    },
-    {
-     id: 56,
-     name: "BNB",
-     rpcUrl: "https://rpc.ankr.com/bsc"
-    },
-    {
-     id: 42161,
-     name: "Arbitrum",
-     rpcUrl: "https://rpc.ankr.com/arbitrum"
-    },
-    {
-     id: 43114,
-     name: "Avalanche",
-     rpcUrl: "https://rpc.ankr.com/avalanche"
-    }
-   ]
-  });
+export async function connectWallet(){
 
- }
+ await modal.open()
 
- const session = await modal.open();
+ const provider = new ethers.BrowserProvider(window.ethereum)
 
- const provider = new ethers.BrowserProvider(
-  modal.getProvider()
- );
+ const signer = await provider.getSigner()
 
- const signer = await provider.getSigner();
+ const address = await signer.getAddress()
 
- const address = await signer.getAddress();
-
- return { provider, signer, address };
+ return {provider,signer,address}
 
 }
