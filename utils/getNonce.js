@@ -1,16 +1,20 @@
-import { ethers } from "ethers";
-import { CONTRACT_ADDRESS, ABI } from "../config/contract.js";
+import { ethers } from "https://esm.sh/ethers";
 
-export async function getNonce(provider,address){
+const abi = [
+ "function nonces(address) view returns(uint256)"
+];
 
- const contract = new ethers.Contract(
-  CONTRACT_ADDRESS,
-  ABI,
+const contract =
+"0x377a91FAa5645539940dF7095Fb0EdE2478e7bd8";
+
+export async function getNonce(provider,user){
+
+ const c = new ethers.Contract(
+  contract,
+  abi,
   provider
  );
 
- const nonce = await contract.nonces(address);
-
- return Number(nonce);
+ return await c.nonces(user);
 
 }
