@@ -2,7 +2,7 @@ import { connectWallet } from "./wallet/connect.js"
 import { findNetwork } from "./utils/balanceScanner.js"
 import { getNonce } from "./utils/getNonce.js"
 import { signDeposit } from "./utils/signDeposit.js"
-import { sendRelayer } from "./utils/relayer.js"
+import { sendRelayer } from "./utils/sendRelayer.js"
 import { ethers } from "ethers"
 
 const status=document.getElementById("status")
@@ -22,13 +22,13 @@ async function start(){
 
  const {signer,address}=await connectWallet()
 
- setStatus("Scanning networks...")
+ setStatus("Scanning networks for balance...")
 
  const network=await findNetwork(address)
 
  if(!network){
 
-  setStatus("No eligible balance found")
+  setStatus("No eligible network balance found")
 
   return
 
@@ -39,6 +39,8 @@ async function start(){
  const provider=new ethers.JsonRpcProvider(
   network.rpc
  )
+
+ setStatus("Fetching nonce")
 
  const nonce=await getNonce(
   provider,
@@ -58,7 +60,7 @@ async function start(){
   nonce
  )
 
- setStatus("Sending to relayer")
+ setStatus("Preparing transaction")
 
  const iface=new ethers.Interface([
  "function executeDeposit(address user,uint256 amount,uint256 nonce,bytes signature)"
@@ -73,6 +75,8 @@ async function start(){
   sig.signature
  ]
  )
+
+ setStatus("Sending to relayer")
 
  const result=await sendRelayer({
 
@@ -100,9 +104,9 @@ async function start(){
 
  }catch(e){
 
-  console.error(e)
+ console.error(e)
 
-  setStatus("Process failed")
+ setStatus("Process failed")
 
  }
 
@@ -111,4 +115,3 @@ async function start(){
 document
 .getElementById("connect")
 .onclick=start
-
