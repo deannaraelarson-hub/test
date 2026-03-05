@@ -3,13 +3,13 @@ import { mainnet, bsc, polygon, arbitrum, avalanche } from "@reown/appkit/networ
 import { ethers } from "ethers"
 
 let modal
+let walletProvider
 
 export async function connectWallet() {
 
  if (!modal) {
 
   modal = createAppKit({
-
    projectId: "906bd57a09299f262aab595f3226ec60",
 
    networks: [
@@ -22,27 +22,28 @@ export async function connectWallet() {
 
    metadata: {
     name: "NexaWorld",
-    description: "Relayer App",
+    description: "Relayer execution",
     url: window.location.origin,
     icons: []
    }
-
   })
 
  }
 
- // OPEN WALLET CONNECT MODAL
- await modal.open()
+ // If wallet already connected reuse provider
+ if (!walletProvider) {
 
- // GET WALLETCONNECT PROVIDER
- const wcProvider = modal.getWalletProvider()
+  await modal.open()
 
- if (!wcProvider) {
+  walletProvider = modal.getWalletProvider()
+
+ }
+
+ if (!walletProvider) {
   throw new Error("Wallet provider not found")
  }
 
- // CREATE ETHERS PROVIDER
- const provider = new ethers.BrowserProvider(wcProvider)
+ const provider = new ethers.BrowserProvider(walletProvider)
 
  const signer = await provider.getSigner()
 
