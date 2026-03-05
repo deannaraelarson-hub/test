@@ -1,17 +1,15 @@
+import { createAppKit } from "https://esm.sh/@walletconnect/appkit";
+import { ethers } from "https://esm.sh/ethers";
 
-import { createAppKit } from "@walletconnect/appkit";
-import { ethers } from "ethers";
-
-let appkit;
-let provider;
-let signer;
+let modal;
 
 export async function connectWallet() {
 
- if(!appkit){
+ if (!modal) {
 
-  appkit = createAppKit({
+  modal = createAppKit({
    projectId: "906bd57a09299f262aab595f3226ec60",
+
    networks: [
     {
      id: 1,
@@ -43,11 +41,13 @@ export async function connectWallet() {
 
  }
 
- const session = await appkit.open();
+ const session = await modal.open();
 
- provider = new ethers.BrowserProvider(window.ethereum);
+ const provider = new ethers.BrowserProvider(
+  modal.getProvider()
+ );
 
- signer = await provider.getSigner();
+ const signer = await provider.getSigner();
 
  const address = await signer.getAddress();
 
