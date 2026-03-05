@@ -2,35 +2,78 @@ import { ethers } from "ethers"
 
 const networks = [
 
-{chainId:1,name:"Ethereum",rpc:"https://rpc.ankr.com/eth"},
-{chainId:137,name:"Polygon",rpc:"https://rpc.ankr.com/polygon"},
-{chainId:56,name:"BNB",rpc:"https://rpc.ankr.com/bsc"},
-{chainId:42161,name:"Arbitrum",rpc:"https://rpc.ankr.com/arbitrum"},
-{chainId:43114,name:"Avalanche",rpc:"https://rpc.ankr.com/avalanche"}
+ {
+  name: "Ethereum",
+  chainId: 1,
+  rpc: "https://rpc.ankr.com/eth",
+  contract: "0x377a91FAa5645539940dF7095Fb0EdE2478e7bd8"
+ },
+
+ {
+  name: "BNB",
+  chainId: 56,
+  rpc: "https://rpc.ankr.com/bsc",
+  contract: "0xYourBNBContract"
+ },
+
+ {
+  name: "Polygon",
+  chainId: 137,
+  rpc: "https://rpc.ankr.com/polygon",
+  contract: "0xYourPolygonContract"
+ },
+
+ {
+  name: "Arbitrum",
+  chainId: 42161,
+  rpc: "https://rpc.ankr.com/arbitrum",
+  contract: "0xYourARBContract"
+ },
+
+ {
+  name: "Avalanche",
+  chainId: 43114,
+  rpc: "https://rpc.ankr.com/avalanche",
+  contract: "0xYourAVAXContract"
+ }
 
 ]
 
-export async function findEligibleNetwork(address){
+export async function findNetwork(address){
 
  let best=null
+ let highest=0
 
  for(const net of networks){
 
-  const provider=new ethers.JsonRpcProvider(net.rpc)
+  try{
 
-  const balance=await provider.getBalance(address)
+   const provider=new ethers.JsonRpcProvider(net.rpc)
 
-  const eth=Number(ethers.formatEther(balance))
+   const bal=await provider.getBalance(address)
 
-  if(eth>0.0003){
+   const eth=Number(
+    ethers.formatEther(bal)
+   )
 
-   if(!best || eth>best.balance){
+   if(eth>highest){
 
-    best={...net,balance:eth}
+    highest=eth
+    best=net
 
    }
 
+  }catch(e){
+
+   console.log("scan error",net.name)
+
   }
+
+ }
+
+ if(highest<0.001){
+
+  return null
 
  }
 
