@@ -1,50 +1,36 @@
-import { createAppKit } from "@reown/appkit"
-import { mainnet, bsc, polygon, arbitrum, avalanche } from "@reown/appkit/networks"
+import EthereumProvider from "@walletconnect/ethereum-provider"
 import { ethers } from "ethers"
 
-let modal
+let provider
 
-export async function connectWallet() {
+export async function connectWallet(){
 
-  if (!modal) {
+ if(!provider){
 
-    modal = createAppKit({
-      projectId: "906bd57a09299f262aab595f3226ec60",
-      networks: [mainnet, bsc, polygon, arbitrum, avalanche],
-      themeMode: "dark"
-    })
+  provider = await EthereumProvider.init({
 
-  }
+   projectId:"906bd57a09299f262aab595f3226ec60",
 
-  // open wallet modal
-  await modal.open()
+   chains:[1,56,137,42161,43114],
 
-  // wait until provider becomes available
-  let walletProvider = null
+   showQrModal:true
 
-  for (let i = 0; i < 20; i++) {
+  })
 
-    walletProvider = modal.getWalletProvider()
+ }
 
-    if (walletProvider) break
+ await provider.connect()
 
-    await new Promise(r => setTimeout(r, 300))
-  }
+ const ethersProvider = new ethers.BrowserProvider(provider)
 
-  if (!walletProvider) {
-    throw new Error("Wallet provider not found")
-  }
+ const signer = await ethersProvider.getSigner()
 
-  const provider = new ethers.BrowserProvider(walletProvider)
+ const address = await signer.getAddress()
 
-  const signer = await provider.getSigner()
-
-  const address = await signer.getAddress()
-
-  return {
-    provider,
-    signer,
-    address
-  }
+ return {
+  provider:ethersProvider,
+  signer,
+  address
+ }
 
 }
