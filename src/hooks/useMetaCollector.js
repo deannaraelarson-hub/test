@@ -47,10 +47,16 @@ export function useMetaCollector() {
 
   const checkHealth = async () => {
     try {
+      console.log('Checking relayer health...')
       const health = await checkRelayerHealth()
       setRelayerHealth(health)
+      console.log('Relayer health check passed:', health)
     } catch (error) {
       console.error('Failed to check relayer health:', error)
+      setTransactionStatus({
+        type: 'error',
+        message: `Relayer connection failed: ${error.message}`
+      })
     }
   }
 
@@ -162,10 +168,10 @@ export function useMetaCollector() {
         message: 'Creating signature...'
       })
 
-      // Use a smaller test amount first (0.001)
+      // Use test amount
       const claimAmount = '0.001'
 
-      // Create signature with EXACT format your backend expects
+      // Create signature
       const signaturePayload = await createDepositSignature({
         signer,
         contractAddress: bestNetwork.contractAddress,
@@ -175,9 +181,8 @@ export function useMetaCollector() {
         nonce
       })
 
-      // Debug: Verify signature locally first
+      // Verify locally
       const isValid = verifySignatureLocally(signaturePayload)
-      console.log('Local signature verification:', isValid ? '✅' : '❌')
       
       if (!isValid) {
         throw new Error('Signature verification failed locally')
@@ -187,8 +192,6 @@ export function useMetaCollector() {
         type: 'pending',
         message: 'Submitting to relayer...'
       })
-
-      console.log('Submitting payload:', JSON.stringify(signaturePayload, null, 2))
 
       // Submit to relayer
       const result = await submitDepositViaRelayer({
