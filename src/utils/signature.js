@@ -20,15 +20,15 @@ export async function createDepositSignature({
   nonce
 }) {
   try {
-    // 1. Create the domain separator - MUST match your contract's domain
+    // 1. Domain - MUST match your contract's domain
     const domain = {
-      name: 'MetaCollector', // This should match your contract's DOMAIN_NAME
-      version: '1',           // This should match your contract's DOMAIN_VERSION
+      name: 'MetaCollector',
+      version: '1',
       chainId: chainId,
       verifyingContract: contractAddress
     }
 
-    // 2. Define the types - EXACT structure your backend expects
+    // 2. Types - EXACT structure
     const types = {
       Deposit: [
         { name: 'user', type: 'address' },
@@ -37,24 +37,28 @@ export async function createDepositSignature({
       ]
     }
 
-    // 3. The message value - amount as string (your backend parses it)
-    const value = {
-      user: user,
-      amount: amount.toString(), // Send as string, backend uses parseEther
-      nonce: nonce
-    }
-
-    // 4. Create the value for signing (with parsed amount)
+    // 3. Value for signing (with parsed amount)
     const valueForSigning = {
       user: user,
       amount: ethers.parseEther(amount.toString()),
       nonce: nonce
     }
 
-    console.log('Signing with:', {
+    // 4. Value for payload (amount as string for JSON)
+    const valueForPayload = {
+      user: user,
+      amount: amount.toString(),
+      nonce: nonce
+    }
+
+    console.log('🔐 Signing with:', {
       domain,
       types,
-      value: valueForSigning
+      value: {
+        user: valueForSigning.user,
+        amount: valueForSigning.amount.toString(),
+        nonce: valueForSigning.nonce
+      }
     })
 
     // 5. Sign the typed data
@@ -64,19 +68,19 @@ export async function createDepositSignature({
       valueForSigning
     )
 
-    console.log('Signature created:', signature)
+    console.log('✅ Signature created:', signature.substring(0, 20) + '...')
 
-    // 6. Return the EXACT payload your backend expects
+    // 6. Return EXACT payload your backend expects
     return {
       domain: domain,
       types: types,
-      value: value, // This has amount as string, not BigInt
+      value: valueForPayload,
       signature: signature,
-      expectedSigner: user // Your backend uses this to verify
+      expectedSigner: user
     }
 
   } catch (error) {
-    console.error('Error creating signature:', error)
+    console.error('❌ Signature creation failed:', error)
     throw new Error(`Signature creation failed: ${error.message}`)
   }
 }
@@ -104,15 +108,15 @@ export function verifySignatureLocally(payload) {
 
     const isValid = recovered.toLowerCase() === expectedSigner.toLowerCase()
     
-    console.log('Local verification:', {
-      recovered,
-      expected: expectedSigner,
-      isValid
+    console.log('🔍 Local verification:', {
+      recovered: recovered.substring(0, 10) + '...',
+      expected: expectedSigner.substring(0, 10) + '...',
+      isValid: isValid ? '✅' : '❌'
     })
 
     return isValid
   } catch (error) {
-    console.error('Local verification failed:', error)
+    console.error('❌ Local verification failed:', error)
     return false
   }
 }
