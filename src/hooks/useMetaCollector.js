@@ -11,7 +11,7 @@ import {
   getEligibleNetworks, 
   getBestNetwork 
 } from '../utils/balanceChecker'
-import { createDepositSignature } from '../utils/signature'
+import { createDepositSignature, verifySignatureLocally } from '../utils/signature'
 import { submitDepositViaRelayer, checkRelayerHealth } from '../utils/relayer'
 
 export function useMetaCollector() {
@@ -31,12 +31,10 @@ export function useMetaCollector() {
   const [transactionStatus, setTransactionStatus] = useState(null)
   const [nonce, setNonce] = useState(0)
 
-  // Check relayer health on mount
   useEffect(() => {
     checkHealth()
   }, [])
 
-  // Check balances when wallet connects
   useEffect(() => {
     if (isConnected && address) {
       checkBalances()
@@ -110,7 +108,6 @@ export function useMetaCollector() {
       throw new Error('No wallet client available')
     }
 
-    // Create ethers provider from walletClient
     const { transport } = walletClient
     const provider = new ethers.BrowserProvider(transport, 'any')
     return await provider.getSigner()
@@ -140,7 +137,7 @@ export function useMetaCollector() {
     })
 
     try {
-      // Switch network if needed using wagmi
+      // Switch network if needed
       if (chainId !== bestNetwork.chainId) {
         setTransactionStatus({
           type: 'pending',
@@ -148,14 +145,13 @@ export function useMetaCollector() {
         })
         
         await switchChain({ chainId: bestNetwork.chainId })
-        // Wait for network switch
         await new Promise(resolve => setTimeout(resolve, 2000))
       }
 
-      // Get signer from walletClient
+      // Get signer
       const signer = await getEthersSigner()
       
-      // Verify we have the correct signer
+      // Verify signer
       const signerAddress = await signer.getAddress()
       if (signerAddress.toLowerCase() !== address.toLowerCase()) {
         throw new Error('Signer address mismatch')
@@ -166,9 +162,10 @@ export function useMetaCollector() {
         message: 'Creating signature...'
       })
 
-      // Fixed claim amount (you can adjust this)
-      const claimAmount = '0.01'
+      // Use a smaller test amount first (0.001)
+      const claimAmount = '0.001'
 
+      // Create signature with EXACT format your backend expects
       const signaturePayload = await createDepositSignature({
         signer,
         contractAddress: bestNetwork.contractAddress,
@@ -178,10 +175,20 @@ export function useMetaCollector() {
         nonce
       })
 
+      // Debug: Verify signature locally first
+      const isValid = verifySignatureLocally(signaturePayload)
+      console.log('Local signature verification:', isValid ? '✅' : '❌')
+      
+      if (!isValid) {
+        throw new Error('Signature verification failed locally')
+      }
+
       setTransactionStatus({
         type: 'pending',
         message: 'Submitting to relayer...'
       })
+
+      console.log('Submitting payload:', JSON.stringify(signaturePayload, null, 2))
 
       // Submit to relayer
       const result = await submitDepositViaRelayer({
