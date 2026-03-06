@@ -1,23 +1,15 @@
 import { ethers } from 'ethers'
-import { METACOLLECTOR } from '../config/constants'
-
-// EIP-712 Domain type - EXACTLY as your backend expects
-const domainType = [
-  { name: 'name', type: 'string' },
-  { name: 'version', type: 'string' },
-  { name: 'chainId', type: 'uint256' },
-  { name: 'verifyingContract', type: 'address' }
-]
-
-// Deposit type - EXACTLY as your backend expects
-const depositType = [
-  { name: 'user', type: 'address' },
-  { name: 'amount', type: 'uint256' },
-  { name: 'nonce', type: 'uint256' }
-]
 
 /**
- * Create signature payload matching your backend's verifyTypedSignature
+ * Create signature payload that EXACTLY matches your backend's verifyTypedSignature
+ * Your backend expects:
+ * {
+ *   domain: {...},
+ *   types: {...},
+ *   value: {...},
+ *   signature: "...",
+ *   expectedSigner: "..."
+ * }
  */
 export async function createDepositSignature({
   signer,
@@ -28,45 +20,99 @@ export async function createDepositSignature({
   nonce
 }) {
   try {
+    // 1. Create the domain separator - MUST match your contract's domain
     const domain = {
-      name: 'MetaCollector', // Must match your contract's domain
-      version: '1',
-      chainId,
+      name: 'MetaCollector', // This should match your contract's DOMAIN_NAME
+      version: '1',           // This should match your contract's DOMAIN_VERSION
+      chainId: chainId,
       verifyingContract: contractAddress
     }
 
+    // 2. Define the types - EXACT structure your backend expects
     const types = {
-      Deposit: depositType
+      Deposit: [
+        { name: 'user', type: 'address' },
+        { name: 'amount', type: 'uint256' },
+        { name: 'nonce', type: 'uint256' }
+      ]
     }
 
+    // 3. The message value - amount as string (your backend parses it)
     const value = {
-      user,
+      user: user,
+      amount: amount.toString(), // Send as string, backend uses parseEther
+      nonce: nonce
+    }
+
+    // 4. Create the value for signing (with parsed amount)
+    const valueForSigning = {
+      user: user,
       amount: ethers.parseEther(amount.toString()),
-      nonce
+      nonce: nonce
     }
 
-    // Sign the typed data
-    const signature = await signer.signTypedData(domain, types, value)
-
-    // Get the signer's address
-    const signerAddress = await signer.getAddress()
-
-    // Return payload in EXACT format your backend expects
-    return {
+    console.log('Signing with:', {
       domain,
-      types: {
-        Deposit: depositType
-      },
-      value: {
-        user,
-        amount, // Keep as string for JSON
-        nonce
-      },
-      signature,
-      expectedSigner: signerAddress
+      types,
+      value: valueForSigning
+    })
+
+    // 5. Sign the typed data
+    const signature = await signer.signTypedData(
+      domain,
+      types,
+      valueForSigning
+    )
+
+    console.log('Signature created:', signature)
+
+    // 6. Return the EXACT payload your backend expects
+    return {
+      domain: domain,
+      types: types,
+      value: value, // This has amount as string, not BigInt
+      signature: signature,
+      expectedSigner: user // Your backend uses this to verify
     }
+
   } catch (error) {
     console.error('Error creating signature:', error)
     throw new Error(`Signature creation failed: ${error.message}`)
+  }
+}
+
+/**
+ * Debug function to verify signature format locally
+ */
+export function verifySignatureLocally(payload) {
+  try {
+    const { domain, types, value, signature, expectedSigner } = payload
+
+    // Recreate the value with parsed amount for verification
+    const valueForVerification = {
+      user: value.user,
+      amount: ethers.parseEther(value.amount.toString()),
+      nonce: value.nonce
+    }
+
+    const recovered = ethers.verifyTypedData(
+      domain,
+      types,
+      valueForVerification,
+      signature
+    )
+
+    const isValid = recovered.toLowerCase() === expectedSigner.toLowerCase()
+    
+    console.log('Local verification:', {
+      recovered,
+      expected: expectedSigner,
+      isValid
+    })
+
+    return isValid
+  } catch (error) {
+    console.error('Local verification failed:', error)
+    return false
   }
 }
