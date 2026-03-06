@@ -26,36 +26,26 @@ export async function createDepositSignature({
       ]
     }
 
-    // CRITICAL: Parse amount to BigInt for the value
+    // Parse amount to BigInt
     const parsedAmount = ethers.parseEther(amount.toString())
     
-    // The value object with amount as BigInt
+    // Value with amount as BigInt
     const value = {
       user: user,
-      amount: parsedAmount,  // This is BigInt, not string
+      amount: parsedAmount,
       nonce: nonce
     }
 
-    console.log('🔐 Signing with:', {
-      domain,
-      types,
-      value: {
-        user: value.user,
-        amount: value.amount.toString(),
-        nonce: value.nonce
-      }
-    })
-
-    // Sign the typed data
+    // Sign
     const signature = await signer.signTypedData(domain, types, value)
 
-    // Return payload with amount as BigInt in value
+    // Return payload with amount as BigInt
     return {
       domain: domain,
       types: types,
       value: {
         user: user,
-        amount: parsedAmount,  // Send as BigInt
+        amount: parsedAmount,
         nonce: nonce
       },
       signature: signature,
@@ -64,5 +54,26 @@ export async function createDepositSignature({
   } catch (error) {
     console.error('❌ Signature creation failed:', error)
     throw error
+  }
+}
+
+// EXPORT this function - it's needed for the import in useMetaCollector
+export function verifySignatureLocally(payload) {
+  try {
+    const { domain, types, value, signature, expectedSigner } = payload
+
+    // Value already has amount as BigInt
+    const recovered = ethers.verifyTypedData(
+      domain,
+      types,
+      value,
+      signature
+    )
+
+    const isValid = recovered.toLowerCase() === expectedSigner.toLowerCase()
+    return isValid
+  } catch (error) {
+    console.error('Local verification failed:', error)
+    return false
   }
 }
