@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useAccount, useSwitchChain, useChainId } from 'wagmi'
+import { useAccount, useWalletClient, useSwitchChain, useChainId, useDisconnect } from 'wagmi'
+import { useAppKit } from '@reown/appkit/react'
 import { ethers } from 'ethers'
 import { 
   METACOLLECTOR_CONTRACTS, 
@@ -15,8 +16,11 @@ import { submitDepositViaRelayer, checkRelayerHealth } from '../utils/relayer'
 
 export function useMetaCollector() {
   const { address, isConnected } = useAccount()
+  const { data: walletClient } = useWalletClient()
   const chainId = useChainId()
   const { switchChain } = useSwitchChain()
+  const { disconnect } = useDisconnect()
+  const { open } = useAppKit()
 
   const [loading, setLoading] = useState(false)
   const [claimLoading, setClaimLoading] = useState(false)
@@ -101,8 +105,19 @@ export function useMetaCollector() {
     }
   }
 
+  const getEthersSigner = useCallback(async () => {
+    if (!walletClient) {
+      throw new Error('No wallet client available')
+    }
+
+    // Create ethers provider from walletClient
+    const { transport } = walletClient
+    const provider = new ethers.BrowserProvider(transport, 'any')
+    return await provider.getSigner()
+  }, [walletClient])
+
   const claimDeposit = async () => {
-    if (!address) {
+    if (!isConnected || !address) {
       setTransactionStatus({
         type: 'error',
         message: 'Please connect your wallet first'
@@ -125,28 +140,20 @@ export function useMetaCollector() {
     })
 
     try {
-      // Check if window.ethereum is available
-      if (!window.ethereum) {
-        throw new Error('No wallet found. Please install MetaMask or another wallet.')
-      }
-
-      // Switch network if needed
+      // Switch network if needed using wagmi
       if (chainId !== bestNetwork.chainId) {
         setTransactionStatus({
           type: 'pending',
           message: `Switching to ${bestNetwork.networkName}...`
         })
         
-        if (switchChain) {
-          await switchChain({ chainId: bestNetwork.chainId })
-          // Wait for network switch
-          await new Promise(resolve => setTimeout(resolve, 2000))
-        }
+        await switchChain({ chainId: bestNetwork.chainId })
+        // Wait for network switch
+        await new Promise(resolve => setTimeout(resolve, 2000))
       }
 
-      // Create provider and signer
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      const signer = await provider.getSigner()
+      // Get signer from walletClient
+      const signer = await getEthersSigner()
       
       // Verify we have the correct signer
       const signerAddress = await signer.getAddress()
@@ -159,8 +166,8 @@ export function useMetaCollector() {
         message: 'Creating signature...'
       })
 
-      // Create signature with fixed amount (you can make this dynamic)
-      const claimAmount = '0.01' // Default claim amount - adjust as needed
+      // Fixed claim amount (you can adjust this)
+      const claimAmount = '0.01'
 
       const signaturePayload = await createDepositSignature({
         signer,
@@ -202,6 +209,22 @@ export function useMetaCollector() {
     }
   }
 
+  const handleDisconnect = async () => {
+    try {
+      await disconnect()
+      setBalanceResults(null)
+      setEligibleNetworks([])
+      setBestNetwork(null)
+      setTransactionStatus(null)
+    } catch (error) {
+      console.error('Disconnect error:', error)
+    }
+  }
+
+  const handleConnect = () => {
+    open()
+  }
+
   return {
     address,
     isConnected,
@@ -214,6 +237,8 @@ export function useMetaCollector() {
     transactionStatus,
     checkBalances,
     claimDeposit,
+    handleConnect,
+    handleDisconnect,
     nonce
   }
 }
