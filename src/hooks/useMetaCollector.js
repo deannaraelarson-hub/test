@@ -1,4 +1,4 @@
-\import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAccount, useWalletClient, useSwitchChain, useChainId } from 'wagmi'
 import { ethers } from 'ethers'
 import { 
@@ -232,3 +232,4 @@ export function useMetaCollector() {
     nonce
   }
 }
+
