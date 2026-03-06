@@ -1,20 +1,14 @@
-import { RELAYER_CONFIG } from '../config/constants'
+import { RELAYER_URL, RELAYER_API_KEY } from '../config/constants'
 
-/**
- * Submit deposit through MetaCollector relayer
- */
 export async function submitDepositViaRelayer({ contractAddress, signaturePayload }) {
   try {
-    const url = `${RELAYER_CONFIG.BASE_URL}${RELAYER_CONFIG.ENDPOINTS.RELAY}`
+    console.log('📤 Submitting to relayer:', RELAYER_URL)
     
-    console.log('Submitting to relayer:', url)
-    console.log('With payload:', { contractAddress, signaturePayload })
-
-    const response = await fetch(url, {
+    const response = await fetch(RELAYER_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': RELAYER_CONFIG.API_KEY
+        'x-api-key': RELAYER_API_KEY
       },
       body: JSON.stringify({
         contractAddress,
@@ -25,32 +19,26 @@ export async function submitDepositViaRelayer({ contractAddress, signaturePayloa
     const data = await response.json()
 
     if (!response.ok) {
+      console.error('❌ Relayer response:', data)
       throw new Error(data.error || `HTTP error ${response.status}`)
     }
 
+    console.log('✅ Relayer success:', data)
     return data
   } catch (error) {
-    console.error('Relayer submission error:', error)
+    console.error('❌ Relayer error:', error)
     throw error
   }
 }
 
-/**
- * Check relayer health
- */
 export async function checkRelayerHealth() {
   try {
-    const url = `${RELAYER_CONFIG.BASE_URL}${RELAYER_CONFIG.ENDPOINTS.HEALTH}`
-    
-    const response = await fetch(url, {
+    const healthUrl = RELAYER_URL.replace('/relayer', '/health')
+    const response = await fetch(healthUrl, {
       headers: {
-        'x-api-key': RELAYER_CONFIG.API_KEY
+        'x-api-key': RELAYER_API_KEY
       }
     })
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error ${response.status}`)
-    }
     
     return await response.json()
   } catch (error) {
