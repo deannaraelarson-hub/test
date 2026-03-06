@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useAccount, useSigner, useNetwork, useSwitchNetwork } from 'wagmi'
+import { useAccount, useWalletClient, useNetwork, useSwitchNetwork } from 'wagmi'
 import { ethers } from 'ethers'
 import { 
   METACOLLECTOR_CONTRACTS, 
@@ -16,7 +16,7 @@ import { submitDepositViaRelayer, checkRelayerHealth } from '../utils/relayer'
 
 export function useMetaCollector() {
   const { address, isConnected } = useAccount()
-  const { data: signer } = useSigner()
+  const { data: walletClient } = useWalletClient()
   const { chain } = useNetwork()
   const { switchNetwork } = useSwitchNetwork()
 
@@ -28,6 +28,15 @@ export function useMetaCollector() {
   const [depositAmount, setDepositAmount] = useState('')
   const [transactionStatus, setTransactionStatus] = useState(null)
   const [nonce, setNonce] = useState(0)
+
+  // Convert walletClient to ethers signer
+  const getEthersSigner = useCallback(() => {
+    if (!walletClient) return null
+    
+    // Create ethers provider from walletClient
+    const provider = new ethers.BrowserProvider(walletClient.transport, 'any')
+    return provider.getSigner()
+  }, [walletClient])
 
   // Initialize providers for each network
   const getProviders = useCallback(() => {
@@ -117,7 +126,7 @@ export function useMetaCollector() {
   }
 
   const executeDeposit = async () => {
-    if (!address || !signer || !bestNetwork || !depositAmount) {
+    if (!address || !walletClient || !bestNetwork || !depositAmount) {
       setTransactionStatus({
         type: 'error',
         message: 'Missing required data or amount'
@@ -166,6 +175,12 @@ export function useMetaCollector() {
         await switchNetwork(bestNetwork.chainId)
         // Wait for network switch
         await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+
+      // Get ethers signer from wallet client
+      const signer = await getEthersSigner()
+      if (!signer) {
+        throw new Error('Failed to get signer')
       }
 
       // Create signature for MetaCollector
