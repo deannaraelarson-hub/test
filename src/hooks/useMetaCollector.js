@@ -161,6 +161,16 @@ export function useMetaCollector() {
 
       const claimAmount = '0.001'
 
+      // DEBUG: Log everything before signing
+      console.log('========== DEBUG SIGNATURE CREATION ==========')
+      console.log('1. Network:', bestNetwork.networkName)
+      console.log('2. Chain ID:', bestNetwork.chainId)
+      console.log('3. Contract Address:', bestNetwork.contractAddress)
+      console.log('4. User:', address)
+      console.log('5. Amount:', claimAmount)
+      console.log('6. Nonce:', nonce)
+      console.log('==============================================')
+
       const signaturePayload = await createDepositSignature({
         signer,
         contractAddress: bestNetwork.contractAddress,
@@ -170,13 +180,51 @@ export function useMetaCollector() {
         nonce
       })
 
-      // ADDED: Local verification before sending to relayer
+      // DEBUG: Log the full payload
+      console.log('========== SIGNATURE PAYLOAD ==========')
+      console.log('DOMAIN:', JSON.stringify(signaturePayload.domain, null, 2))
+      console.log('TYPES:', JSON.stringify(signaturePayload.types, null, 2))
+      console.log('VALUE:', JSON.stringify(signaturePayload.value, null, 2))
+      console.log('SIGNATURE:', signaturePayload.signature)
+      console.log('EXPECTED SIGNER:', signaturePayload.expectedSigner)
+      console.log('========================================')
+
+      // Verify locally
       console.log('🔍 Verifying signature locally...')
       const isValid = verifySignatureLocally(signaturePayload)
       
       if (!isValid) {
         console.error('❌ Local signature verification failed')
-        throw new Error('Signature verification failed locally - check domain and types')
+        
+        // Try to recover the address manually for debugging
+        try {
+          const { domain, types, value } = signaturePayload
+          const valueForVerification = {
+            user: value.user,
+            amount: ethers.parseEther(value.amount.toString()),
+            nonce: value.nonce
+          }
+          
+          const recovered = ethers.verifyTypedData(
+            domain,
+            types,
+            valueForVerification,
+            signaturePayload.signature
+          )
+          
+          console.log('🔍 MANUAL VERIFICATION:')
+          console.log('Recovered address:', recovered)
+          console.log('Expected address:', address)
+          console.log('Match:', recovered.toLowerCase() === address.toLowerCase() ? '✅' : '❌')
+          
+          if (recovered.toLowerCase() !== address.toLowerCase()) {
+            console.log('⚠️ Addresses do not match! This is the root cause.')
+          }
+        } catch (manualError) {
+          console.error('Manual verification also failed:', manualError)
+        }
+        
+        throw new Error('Signature verification failed locally - check console for details')
       }
       console.log('✅ Local signature verification passed')
 
