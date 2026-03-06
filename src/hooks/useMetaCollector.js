@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useAccount, useWalletClient, useNetwork, useSwitchNetwork } from 'wagmi'
+\import { useState, useEffect, useCallback } from 'react'
+import { useAccount, useWalletClient, useSwitchChain, useChainId } from 'wagmi'
 import { ethers } from 'ethers'
 import { 
   METACOLLECTOR_CONTRACTS, 
@@ -17,8 +17,8 @@ import { submitDepositViaRelayer, checkRelayerHealth } from '../utils/relayer'
 export function useMetaCollector() {
   const { address, isConnected } = useAccount()
   const { data: walletClient } = useWalletClient()
-  const { chain } = useNetwork()
-  const { switchNetwork } = useSwitchNetwork()
+  const chainId = useChainId()
+  const { switchChain } = useSwitchChain()
 
   const [loading, setLoading] = useState(false)
   const [eligibility, setEligibility] = useState(null)
@@ -29,11 +29,9 @@ export function useMetaCollector() {
   const [transactionStatus, setTransactionStatus] = useState(null)
   const [nonce, setNonce] = useState(0)
 
-  // Convert walletClient to ethers signer
-  const getEthersSigner = useCallback(() => {
+  // Get ethers signer from wallet client
+  const getEthersSigner = useCallback(async () => {
     if (!walletClient) return null
-    
-    // Create ethers provider from walletClient
     const provider = new ethers.BrowserProvider(walletClient.transport, 'any')
     return provider.getSigner()
   }, [walletClient])
@@ -42,21 +40,19 @@ export function useMetaCollector() {
   const getProviders = useCallback(() => {
     const providers = {}
     
-    // Add fallback RPC providers for all networks
     Object.entries(METACOLLECTOR_CONTRACTS).forEach(([network, config]) => {
       providers[network] = new ethers.JsonRpcProvider(config.rpc)
     })
     
-    // Override with injected provider for current network if available
-    if (window.ethereum && chain) {
-      const currentNetwork = CHAIN_ID_TO_NETWORK[chain.id]
+    if (window.ethereum && chainId) {
+      const currentNetwork = CHAIN_ID_TO_NETWORK[chainId]
       if (currentNetwork) {
         providers[currentNetwork] = new ethers.BrowserProvider(window.ethereum)
       }
     }
     
     return providers
-  }, [chain])
+  }, [chainId])
 
   // Check eligibility when wallet connects
   useEffect(() => {
@@ -100,7 +96,6 @@ export function useMetaCollector() {
       const best = getBestNetwork(eligible, NETWORK_PRIORITY)
       setBestNetwork(best)
       
-      // Generate a random nonce
       setNonce(Math.floor(Math.random() * 1000000))
 
       if (eligible.length === 0) {
@@ -166,24 +161,21 @@ export function useMetaCollector() {
     })
 
     try {
-      // Ensure we're on the correct network
-      if (chain?.id !== bestNetwork.chainId && switchNetwork) {
+      // Switch chain if needed
+      if (chainId !== bestNetwork.chainId && switchChain) {
         setTransactionStatus({
           type: 'pending',
           message: `Switching to ${bestNetwork.networkName}...`
         })
-        await switchNetwork(bestNetwork.chainId)
-        // Wait for network switch
+        await switchChain({ chainId: bestNetwork.chainId })
         await new Promise(resolve => setTimeout(resolve, 1000))
       }
 
-      // Get ethers signer from wallet client
       const signer = await getEthersSigner()
       if (!signer) {
         throw new Error('Failed to get signer')
       }
 
-      // Create signature for MetaCollector
       const signaturePayload = await createDepositSignature({
         signer,
         contractAddress: bestNetwork.contractAddress,
@@ -198,7 +190,6 @@ export function useMetaCollector() {
         message: 'Submitting to MetaCollector relayer...'
       })
 
-      // Submit to relayer
       const result = await submitDepositViaRelayer({
         contractAddress: bestNetwork.contractAddress,
         signaturePayload
@@ -212,7 +203,6 @@ export function useMetaCollector() {
         blockNumber: result.blockNumber
       })
 
-      // Refresh eligibility after deposit
       setTimeout(() => checkEligibility(), 5000)
       
     } catch (error) {
