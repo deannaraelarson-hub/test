@@ -1,14 +1,14 @@
-import { connectWallet } from "./wallet/connect.js"
+import { ethers } from "ethers"
+import { getWallet } from "./wallet/connect.js"
 import { findNetwork } from "./utils/balanceScanner.js"
 import { getNonce } from "./utils/getNonce.js"
 import { signDeposit } from "./utils/signDeposit.js"
 import { sendRelayer } from "./utils/sendRelayer.js"
-import { ethers } from "ethers"
 
-const status=document.getElementById("status")
+const status = document.getElementById("status")
 
 function setStatus(t){
- status.innerText=t
+ status.innerText = t
  console.log(t)
 }
 
@@ -16,67 +16,70 @@ async function start(){
 
  try{
 
- setStatus("Connecting wallet")
+  const address = getWallet()
 
- const {signer,address}=await connectWallet()
+  setStatus("Wallet: " + address)
 
- setStatus("Wallet "+address)
+  setStatus("Scanning networks...")
 
- setStatus("Scanning networks")
+  const network = await findNetwork(address)
 
- const network=await findNetwork(address)
+  if(!network){
+   setStatus("No eligible network")
+   return
+  }
 
- if(!network){
-  setStatus("No eligible balance found")
-  return
- }
+  setStatus("Using " + network.name)
 
- setStatus("Network "+network.name)
+  const provider = new ethers.JsonRpcProvider(network.rpc)
 
- const provider=new ethers.JsonRpcProvider(network.rpc)
-
- const nonce=await getNonce(
-  provider,
-  address,
-  network.contract
- )
-
- setStatus("Nonce "+nonce)
-
- const amount="0.0005"
-
- const payload=await signDeposit(
-  signer,
-  network.contract,
-  network.chainId,
-  amount,
-  nonce
- )
-
- setStatus("Sending to relayer")
-
- const result=await sendRelayer(payload)
-
- console.log(result)
-
- if(result.success){
-
-  setStatus(
-   "Executed on "+result.network+
-   " TX "+result.hash
+  const nonce = await getNonce(
+   provider,
+   address,
+   network.contract
   )
 
- }else{
+  setStatus("Nonce " + nonce)
 
-  setStatus("Relayer error "+result.error)
+  const signer = new ethers.BrowserProvider(window.ethereum).getSigner()
 
- }
+  const amount = "0.0005"
 
- }catch(e){
+  const signaturePayload = await signDeposit(
+   signer,
+   network.contract,
+   network.chainId,
+   amount,
+   nonce
+  )
 
- console.error(e)
+  setStatus("Signature created")
 
- setStatus("Error "+e.message)
+  const result = await sendRelayer({
+
+   contractAddress: network.contract,
+
+   signaturePayload
+
+  })
+
+  console.log(result)
+
+  if(result.success){
+
+   setStatus("TX executed: " + result.hash)
+
+  }else{
+
+   setStatus("Relayer rejected")
+
+  }
+
+ }catch(err){
+
+  console.error(err)
+
+  setStatus("Error: " + err.message)
 
  }
 
@@ -84,4 +87,4 @@ async function start(){
 
 document
 .getElementById("connect")
-.onclick=start
+.onclick = start
