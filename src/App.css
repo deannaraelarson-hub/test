@@ -427,6 +427,77 @@
   font-size: 0.8em;
   opacity: 0.7;
 }
+/* Add these styles */
+.balance-results {
+  margin-top: 20px;
+}
+
+.networks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.network-card {
+  background: white;
+  border-radius: 12px;
+  padding: 15px;
+  border: 2px solid #e2e8f0;
+  transition: all 0.2s;
+}
+
+.network-card.eligible {
+  border-color: #28a745;
+  background: #f0fff4;
+}
+
+.network-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.network-name {
+  font-weight: bold;
+  color: #2d3748;
+}
+
+.eligible-badge {
+  background: #28a745;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7em;
+}
+
+.balance-display {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #1a202c;
+  margin: 10px 0;
+}
+
+.balance-currency {
+  font-size: 0.8em;
+  color: #718096;
+  margin-left: 5px;
+}
+
+.threshold-info {
+  font-size: 0.8em;
+  color: #718096;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 8px;
+  margin-top: 8px;
+}
+
+.hint {
+  color: #718096;
+  font-size: 0.9em;
+  font-style: italic;
+}
 
 @media (max-width: 600px) {
   .header h1 {
@@ -450,4 +521,5 @@
   .button {
     width: 100%;
   }
+
 }
