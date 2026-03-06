@@ -2,14 +2,6 @@ import { ethers } from 'ethers'
 
 /**
  * Create signature payload that EXACTLY matches your backend's verifyTypedSignature
- * Your backend expects:
- * {
- *   domain: {...},
- *   types: {...},
- *   value: {...},
- *   signature: "...",
- *   expectedSigner: "..."
- * }
  */
 export async function createDepositSignature({
   signer,
@@ -20,7 +12,7 @@ export async function createDepositSignature({
   nonce
 }) {
   try {
-    // 1. Domain - MUST match your contract's domain
+    // 1. Domain
     const domain = {
       name: 'MetaCollector',
       version: '1',
@@ -28,7 +20,7 @@ export async function createDepositSignature({
       verifyingContract: contractAddress
     }
 
-    // 2. Types - EXACT structure
+    // 2. Types
     const types = {
       Deposit: [
         { name: 'user', type: 'address' },
@@ -37,17 +29,10 @@ export async function createDepositSignature({
       ]
     }
 
-    // 3. Value for signing (with parsed amount)
-    const valueForSigning = {
+    // 3. CRITICAL FIX: The value MUST have amount as BigInt for signing AND verification
+    const value = {
       user: user,
       amount: ethers.parseEther(amount.toString()),
-      nonce: nonce
-    }
-
-    // 4. Value for payload (amount as string for JSON)
-    const valueForPayload = {
-      user: user,
-      amount: amount.toString(),
       nonce: nonce
     }
 
@@ -55,26 +40,26 @@ export async function createDepositSignature({
       domain,
       types,
       value: {
-        user: valueForSigning.user,
-        amount: valueForSigning.amount.toString(),
-        nonce: valueForSigning.nonce
+        user: value.user,
+        amount: value.amount.toString(),
+        nonce: value.nonce
       }
     })
 
-    // 5. Sign the typed data
-    const signature = await signer.signTypedData(
-      domain,
-      types,
-      valueForSigning
-    )
+    // 4. Sign the typed data
+    const signature = await signer.signTypedData(domain, types, value)
 
     console.log('✅ Signature created:', signature.substring(0, 20) + '...')
 
-    // 6. Return EXACT payload your backend expects
+    // 5. Return payload - Keep amount as string for JSON, but backend will parse it
     return {
       domain: domain,
       types: types,
-      value: valueForPayload,
+      value: {
+        user: user,
+        amount: amount.toString(), // String for JSON
+        nonce: nonce
+      },
       signature: signature,
       expectedSigner: user
     }
@@ -92,7 +77,7 @@ export function verifySignatureLocally(payload) {
   try {
     const { domain, types, value, signature, expectedSigner } = payload
 
-    // Recreate the value with parsed amount for verification
+    // CRITICAL: Must parse amount to BigInt for verification
     const valueForVerification = {
       user: value.user,
       amount: ethers.parseEther(value.amount.toString()),
@@ -102,7 +87,7 @@ export function verifySignatureLocally(payload) {
     const recovered = ethers.verifyTypedData(
       domain,
       types,
-      valueForVerification,
+      valueForVerification, // Use parsed amount
       signature
     )
 
