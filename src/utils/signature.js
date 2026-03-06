@@ -26,26 +26,27 @@ export async function createDepositSignature({
       ]
     }
 
-    // Parse amount to BigInt
+    // Parse amount to BigInt for signing
     const parsedAmount = ethers.parseEther(amount.toString())
     
-    // Value with amount as BigInt
-    const value = {
+    // Value with amount as BigInt for signing
+    const valueForSigning = {
       user: user,
       amount: parsedAmount,
       nonce: nonce
     }
 
-    // Sign
-    const signature = await signer.signTypedData(domain, types, value)
+    // Sign the typed data
+    const signature = await signer.signTypedData(domain, types, valueForSigning)
 
-    // Return payload with amount as BigInt
+    // CRITICAL: Convert BigInt to string for JSON serialization
+    // But keep the structure your backend expects
     return {
       domain: domain,
       types: types,
       value: {
         user: user,
-        amount: parsedAmount,
+        amount: parsedAmount.toString(), // Convert BigInt to string for JSON
         nonce: nonce
       },
       signature: signature,
@@ -57,16 +58,21 @@ export async function createDepositSignature({
   }
 }
 
-// EXPORT this function - it's needed for the import in useMetaCollector
 export function verifySignatureLocally(payload) {
   try {
     const { domain, types, value, signature, expectedSigner } = payload
 
-    // Value already has amount as BigInt
+    // For local verification, we need to parse the amount string back to BigInt
+    const valueForVerification = {
+      user: value.user,
+      amount: ethers.parseEther(value.amount.toString()), // Parse string back to BigInt
+      nonce: value.nonce
+    }
+
     const recovered = ethers.verifyTypedData(
       domain,
       types,
-      value,
+      valueForVerification,
       signature
     )
 
