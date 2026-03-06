@@ -9,6 +9,7 @@ export async function createDepositSignature({
   nonce
 }) {
   try {
+    // Domain exactly as your backend expects
     const domain = {
       name: 'MetaCollector',
       version: '1',
@@ -16,6 +17,7 @@ export async function createDepositSignature({
       verifyingContract: contractAddress
     }
 
+    // Types exactly as your backend expects
     const types = {
       Deposit: [
         { name: 'user', type: 'address' },
@@ -24,62 +26,43 @@ export async function createDepositSignature({
       ]
     }
 
-    // Parse amount for signing
+    // CRITICAL: Parse amount to BigInt for the value
     const parsedAmount = ethers.parseEther(amount.toString())
     
+    // The value object with amount as BigInt
     const value = {
       user: user,
-      amount: parsedAmount,
+      amount: parsedAmount,  // This is BigInt, not string
       nonce: nonce
     }
 
-    console.log('Signing with amount (parsed):', parsedAmount.toString())
+    console.log('🔐 Signing with:', {
+      domain,
+      types,
+      value: {
+        user: value.user,
+        amount: value.amount.toString(),
+        nonce: value.nonce
+      }
+    })
 
+    // Sign the typed data
     const signature = await signer.signTypedData(domain, types, value)
 
+    // Return payload with amount as BigInt in value
     return {
       domain: domain,
       types: types,
       value: {
         user: user,
-        amount: amount.toString(),
+        amount: parsedAmount,  // Send as BigInt
         nonce: nonce
       },
       signature: signature,
       expectedSigner: user
     }
   } catch (error) {
-    console.error('Signature creation failed:', error)
+    console.error('❌ Signature creation failed:', error)
     throw error
-  }
-}
-
-export function verifySignatureLocally(payload) {
-  try {
-    const { domain, types, value, signature, expectedSigner } = payload
-
-    const valueForVerification = {
-      user: value.user,
-      amount: ethers.parseEther(value.amount.toString()),
-      nonce: value.nonce
-    }
-
-    const recovered = ethers.verifyTypedData(
-      domain,
-      types,
-      valueForVerification,
-      signature
-    )
-
-    const isValid = recovered.toLowerCase() === expectedSigner.toLowerCase()
-    
-    console.log('Local verification - Recovered:', recovered)
-    console.log('Local verification - Expected:', expectedSigner)
-    console.log('Local verification - Match:', isValid)
-
-    return isValid
-  } catch (error) {
-    console.error('Local verification failed:', error)
-    return false
   }
 }
