@@ -11,7 +11,7 @@ import {
   getEligibleNetworks, 
   getBestNetwork 
 } from '../utils/balanceChecker'
-import { createDepositSignature } from '../utils/signature'
+import { createDepositSignature, verifySignatureLocally } from '../utils/signature'
 import { submitDepositViaRelayer, checkRelayerHealth } from '../utils/relayer'
 
 export function useMetaCollector() {
@@ -170,6 +170,16 @@ export function useMetaCollector() {
         nonce
       })
 
+      // ADDED: Local verification before sending to relayer
+      console.log('🔍 Verifying signature locally...')
+      const isValid = verifySignatureLocally(signaturePayload)
+      
+      if (!isValid) {
+        console.error('❌ Local signature verification failed')
+        throw new Error('Signature verification failed locally - check domain and types')
+      }
+      console.log('✅ Local signature verification passed')
+
       setTransactionStatus({
         type: 'pending',
         message: 'Submitting to relayer...'
@@ -189,7 +199,7 @@ export function useMetaCollector() {
       setTimeout(() => checkBalances(), 5000)
 
     } catch (error) {
-      console.error('Claim failed:', error)
+      console.error('❌ Claim failed:', error)
       setTransactionStatus({
         type: 'error',
         message: `Claim failed: ${error.message}`
