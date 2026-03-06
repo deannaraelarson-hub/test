@@ -1,10 +1,15 @@
 {
- "name": "relayer-frontend",
- "version": "1.0.0",
- "type": "module",
- "dependencies": {
-  "ethers": "^6.12.1",
-  "@walletconnect/modal": "^2.6.2",
-  "@walletconnect/ethereum-provider": "^2.11.0"
- }
+  "name": "relayer-frontend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite"
+  },
+  "dependencies": {
+    "ethers": "^6.12.1",
+    "@reown/appkit": "^1.1.2"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
 }
