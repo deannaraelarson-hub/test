@@ -8,25 +8,33 @@ export async function signDeposit(
  nonce
 ){
 
+ const user=await signer.getAddress()
+
  const domain={
-  name:"MetaCollector",
+  name:"RelayerDeposit",
   version:"1",
   chainId,
   verifyingContract:contract
  }
 
  const types={
+
   Deposit:[
+
    {name:"user",type:"address"},
    {name:"amount",type:"uint256"},
    {name:"nonce",type:"uint256"}
+
   ]
+
  }
 
  const value={
-  user:await signer.getAddress(),
-  amount:ethers.parseEther(amount),
+
+  user,
+  amount:ethers.parseEther(amount).toString(),
   nonce
+
  }
 
  const signature=await signer.signTypedData(
@@ -35,6 +43,14 @@ export async function signDeposit(
   value
  )
 
- return {domain,types,value,signature}
+ return{
+
+  domain,
+  types,
+  value,
+  signature,
+  expectedSigner:user
+
+ }
 
 }
