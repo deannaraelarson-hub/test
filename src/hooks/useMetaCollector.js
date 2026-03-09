@@ -14,7 +14,7 @@ import {
 import { createDepositSignature } from '../utils/signature'
 import { submitDepositViaRelayer, checkRelayerHealth, fetchUserNonce } from '../utils/relayer'
 
-export function useMetaCollector() {
+export function useMetaCollector() { 
   const { address, isConnected } = useAccount()
   const { data: walletClient } = useWalletClient()
   const chainId = useChainId()
@@ -359,3 +359,4 @@ export function useMetaCollector() {
     refreshNonce
   }
 }
+
