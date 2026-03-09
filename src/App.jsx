@@ -1,4 +1,3 @@
-// App.js - Updated with nonce display
 import React from 'react'
 import { useMetaCollector } from './hooks/useMetaCollector'
 import './App.css'
@@ -13,11 +12,13 @@ function App() {
     eligibleNetworks,
     bestNetwork,
     transactionStatus,
-    currentNonces,
+    currentNonce,           // Add this
+    isFetchingNonce,        // Add this
     checkBalances,
     claimDeposit,
     handleConnect,
-    handleDisconnect
+    handleDisconnect,
+    refreshNonce            // Add this
   } = useMetaCollector()
 
   return (
@@ -52,18 +53,18 @@ function App() {
                   </span>
                 </div>
                 
-                {/* Display current nonces if available */}
-                {Object.keys(currentNonces).length > 0 && (
-                  <div className="nonces-container">
-                    <span className="nonces-label">Current Nonces:</span>
-                    <div className="nonces-list">
-                      {Object.entries(currentNonces).map(([network, nonce]) => (
-                        <div key={network} className="nonce-item">
-                          <span className="nonce-network">{network}:</span>
-                          <span className="nonce-value">{nonce}</span>
-                        </div>
-                      ))}
-                    </div>
+                {/* Display current nonce for the selected network */}
+                {bestNetwork && currentNonce !== null && (
+                  <div className="nonce-display">
+                    <span className="nonce-label">Current Nonce:</span>
+                    <span className="nonce-value">{currentNonce}</span>
+                    <button 
+                      onClick={refreshNonce} 
+                      className="button button-small button-secondary"
+                      disabled={isFetchingNonce}
+                    >
+                      {isFetchingNonce ? '🔄' : '↻'}
+                    </button>
                   </div>
                 )}
                 
@@ -117,21 +118,11 @@ function App() {
                           <span className="balance-value">{network.balanceFormatted}</span>
                           <span className="balance-currency">{network.currency}</span>
                         </div>
-                        <div className="usd-value">
-                          ≈ ${network.balanceInUSD} USD
-                        </div>
                         <div className="threshold-info">
-                          Need: ${MIN_USD_BALANCE} min
+                          Need: {network.minRequired} {network.currency}
                         </div>
                         {network.error && (
                           <div className="error-info">⚠️ {network.error}</div>
-                        )}
-                        
-                        {/* Show current nonce for this network */}
-                        {currentNonces[network.network] !== undefined && (
-                          <div className="nonce-info">
-                            Nonce: {currentNonces[network.network]}
-                          </div>
                         )}
                       </div>
                     ))}
@@ -146,19 +137,26 @@ function App() {
                     <span className="claim-badge">🎉 ELIGIBLE ON {bestNetwork.networkName}</span>
                   </div>
                   
-                  <div className="claim-details">
-                    <p>Using nonce: <strong>{currentNonces[bestNetwork.network] || '0'}</strong></p>
+                  {/* Show nonce information before claiming */}
+                  <div className="nonce-info">
+                    <p>Using nonce: <strong>{currentNonce !== null ? currentNonce : 'Fetching...'}</strong></p>
+                    <p className="nonce-hint">This nonce is fetched from the contract via relayer</p>
                   </div>
                   
                   <button
                     onClick={claimDeposit}
-                    disabled={claimLoading}
+                    disabled={claimLoading || isFetchingNonce || currentNonce === null}
                     className="button button-claim button-large"
                   >
                     {claimLoading ? (
                       <>
                         <span className="spinner"></span>
                         Processing...
+                      </>
+                    ) : isFetchingNonce ? (
+                      <>
+                        <span className="spinner"></span>
+                        Fetching Nonce...
                       </>
                     ) : (
                       <>
