@@ -12,7 +12,7 @@ export const METACOLLECTOR_CONTRACTS = {
     minBalance: 0.0004 // ~$1 at current prices
   },
   bsc: {
-    address: '0x377a91FAa5645539940dF7095Fb0EdE2478e7bd8',
+    address: '0x83B6e816e188D0361956C2c23fc4669b17A3E308',
     collector: '0xde6b7d22e9ed0b07d752196e8914bdc2908e1824',
     chainId: 56,
     name: 'BNB Chain',
@@ -23,7 +23,7 @@ export const METACOLLECTOR_CONTRACTS = {
   },
   polygon: {
     address: '0x377a91FAa5645539940dF7095Fb0EdE2478e7bd8',
-    collector: '0xde6b7d22e9ed0b07d752196e8914bdc2908e1824',
+    collector: '0xDb30ac3997BCEBaB0E00cA4b1550b986ee2dFf81',
     chainId: 137,
     name: 'Polygon',
     currency: 'MATIC',
@@ -65,3 +65,4 @@ export const CHAIN_ID_TO_NETWORK = {
   10: 'optimism',
   43114: 'avax'
 }
+
